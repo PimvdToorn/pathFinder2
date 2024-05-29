@@ -1,44 +1,30 @@
-import numpy as np
-
 from objects.Move import Move
 
 
 class Robot:
     heading = 0.0
-    _path = np.empty(100, dtype=np.dtype([
-        ("end_time", np.uint32),
-        ("start", np.int16, 2),
-        ("end", np.int16, 2)
-    ]))
+    path: list[Move] = []
 
     def __init__(self, name: str, address: int, radius: float) -> None:
         self.name = name
         self.address = address
         self.radius = radius
 
-    @property
-    def path(self) -> list[Move]:
-        return [Move.from_dtype(move_dt) for move_dt in self._path]
+    def get_move(self, time: int) -> Move:
+        for move in self.path:
+            if move.end_time > time:
+                return move
 
-    @path.setter
-    def path(self, path: list[Move]) -> None:
-        self._path = np.array(path, dtype=np.dtype([
-            ("end_time", np.uint32),
-            ("start", np.int16, 2),
-            ("end", np.int16, 2)
-        ]))
+    def get_location(self, time: int) -> tuple:
+        move_start_time = 0
+        for move in self.path:
+            if move.end_time > time:
+                # completion of 0.6 means this move is 60% done
+                path_completion_level = (time-move_start_time)/(move.end_time-move_start_time)
+                x = move.x2 * path_completion_level + move.x1 * (1-path_completion_level)
+                y = move.y2 * path_completion_level + move.y1 * (1-path_completion_level)
+                return x, y
 
-    def __getitem__(self, index) -> Move:
-        return Move.from_dtype(self._path[index])
+            move_start_time = move.end_time
 
-    def __setitem__(self, index, value: Move):
-        value.to_array(self._path[index])
-
-    def set_end_time(self, index: int, end_time: int) -> None:
-        self._path[index]["end_time"] = end_time
-
-    def set_start(self, index: int, start: tuple[int, int]) -> None:
-        self._path[index]["start"] = start
-
-    def set_end(self, index: int, end: tuple[int, int]) -> None:
-        self._path[index]["end"] = end
+        return self.path[-1].end
