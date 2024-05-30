@@ -1,4 +1,5 @@
 from math import sqrt
+from typing import Any
 
 from Types import Point, Line
 from objects.Move import Move
@@ -24,17 +25,14 @@ def get_slope(line: Line) -> float:
         return float('inf')
 
 
-def line_intersection_t_u(line1: Line, line2: Line) -> tuple[float, float]:
+def line_intersection_t_u(l1: Line, l2: Line) -> tuple[float, float]:
     # https://en.wikipedia.org/wiki/Line%E2%80%93line_intersection#:~:text=denominator%20is%20zero.-,Given%20two%20points%20on%20each%20line%20segment,-%5Bedit%5D
-    x = [line1.x1, line1.x2, line2.x1, line2.x2]
-    y = [line1.y1, line1.y2, line2.y1, line2.y2]
-
-    divider = (x[0] - x[1]) * (y[2] - y[3]) - (y[0] - y[1]) * (x[2] - x[3])
+    divider = (l1.x1 - l1.x2) * (l2.y1 - l2.y2) - (l1.y1 - l1.y2) * (l2.x1 - l2.x2)
     if divider == 0.0:
         return float('inf'), float('inf')
 
-    t = ((x[0] - x[2]) * (y[2] - y[3]) - (y[0] - y[2]) * (x[2] - x[3])) / divider
-    u = - ((x[0] - x[1]) * (y[0] - y[2]) - (y[0] - y[1]) * (x[0] - x[2])) / divider
+    t = ((l1.x1 - l2.x1) * (l2.y1 - l2.y2) - (l1.y1 - l2.y1) * (l2.x1 - l2.x2)) / divider
+    u = - ((l1.x1 - l1.x2) * (l1.y1 - l2.y1) - (l1.y1 - l1.y2) * (l1.x1 - l2.x1)) / divider
     return t, u
 
 
@@ -53,15 +51,26 @@ def line_intersection(line1: Line, line2: Line) -> Point:
 
 def hit_coords_point_to_line(p: Point, line: Line) -> Point:
     try:
-        right_angle_slope = -1 / get_slope(line)
+        perpendicular_slope = -1 / get_slope(line)
     except ZeroDivisionError:
         # Slope is 0, so same x as p and same y as line
         return Point(p.x, line.y1)
 
-    p_line = Line(p, Point(p.x + 1, p.y + right_angle_slope))
+    p_line = Line(p, Point(p.x + 1, p.y + perpendicular_slope))
     t = line_intersection_t(p_line, line)
 
-    return Point(p.x + t, p.y + t * right_angle_slope)
+    return Point(p.x + t, p.y + t * perpendicular_slope)
+
+
+def point_to_line_t(p: Point, line: Line) -> float:
+    try:
+        perpendicular_slope = -1 / get_slope(line)
+    except ZeroDivisionError:
+        # Slope is 0, so p.x as a part (percentage) from x1 to x2
+        return (line.x2 - p.x) / (line.x2 - line.x1)
+
+    p_line = Line(p, Point(p.x + 1, p.y + perpendicular_slope))
+    return line_intersection_t(line, p_line)
 
 
 def does_intersect(move: Move, obstacle: Obstacle) -> bool:
@@ -74,33 +83,75 @@ def does_intersect(move: Move, obstacle: Obstacle) -> bool:
         print("Out of bound")
         return False
 
-    # print(f"Move bounds: x_min: {move.x_min}, x_max: {move.x_max}, y_min: {move.y_min}, y_max: {move.y_max}")
-    # left, right = [], []
     for corner in obstacle.corners:
         if (corner.x < move.x_min or corner.x > move.x_max or
                 corner.y < move.y_min or corner.y > move.y_max):
-            # print(f"Corner out of bounds: {corner}")
             continue
 
         distance = distance_point_to_line(corner, move.line)
         if abs(distance) < move.clearance:
             print(f"Corner too close: {corner}, distance: {distance}")
             return True
-        # if distance < 0:
-        #     right.append(corner)
-        # else:
-        #     left.append(corner)
 
-    # print(f"l: {left}, r: {right}")
-    # if left != [] and right != []:
-    #     print(f"Left and right, l: {left}, r: {right}")
-    #     return True
-
-    t_u_offset = move.clearance / distance_point_to_point(move.start, move.end)
-    # print(f"Len: {distance_point_to_point(move.start, move.end)}, clr: {move.clearance}, t_offset: {t_offset}")
     for vertex in obstacle.vertices:
         t, u = line_intersection_t_u(move.line, vertex)
-        if 0 - t_u_offset < t < 1 + t_u_offset and 0 - t_u_offset < u < 1 + t_u_offset:
+        if 0 < t < 1 and 0 < u < 1:
             print(f"Hit, t: {t}, u: {u}, vertex: {vertex}, at: {line_intersection(move.line, vertex)}")
             return True
+
+        # for end_point in [move.start, move.end]:
+        #     if (end_point.x + move.clearance < vertex.x_min or end_point.x - move.clearance > vertex.x_max or
+        #             end_point.y + move.clearance < vertex.y_min or end_point.y - move.clearance > vertex.y_max):
+        #         continue
+        #
+        #     distance = distance_point_to_line(end_point, vertex)
+        #     if abs(distance) < move.clearance:
+        #         print(f"End point too close: {end_point}, distance: {distance}, at: {line_intersection(move.line, vertex)}")
+        #         return True
+
     return False
+
+
+def first_intersection(move: Move, obstacle: Obstacle) -> tuple[float, Any]:
+    # Check the "bounding box"
+    if not (
+            move.x_min < obstacle.x_max and
+            move.x_max > obstacle.x_min and
+            move.y_min < obstacle.y_max and
+            move.y_max > obstacle.y_min):
+        return float('inf'), None
+
+    t_offset = move.clearance / distance_point_to_point(move.start, move.end)
+    t_min = 0 - t_offset
+    lowest_t = 1 + t_offset
+    closest_corner_or_vertex = None
+
+    for corner in obstacle.corners:
+        if (corner.x < move.x_min or corner.x > move.x_max or
+                corner.y < move.y_min or corner.y > move.y_max):
+            continue
+
+        t = point_to_line_t(corner, move.line)
+        if t_min < t < lowest_t and abs(distance_point_to_line(corner, move.line)) < move.clearance:
+            lowest_t = t
+            closest_corner_or_vertex = corner
+
+    for vertex in obstacle.vertices:
+        t, u = line_intersection_t_u(move.line, vertex)
+        if 0 < t < lowest_t and 0 < u < 1:
+            lowest_t = t
+            closest_corner_or_vertex = vertex
+
+        # for end_point in [move.start, move.end]:
+        #     if (end_point.x + move.clearance < vertex.x_min or end_point.x - move.clearance > vertex.x_max or
+        #             end_point.y + move.clearance < vertex.y_min or end_point.y - move.clearance > vertex.y_max):
+        #         continue
+        #
+        #     t = line_intersection_t(move.line, vertex)
+        #     if t_min < t < lowest_t:
+        #         lowest_t = t
+        #         closest_corner_or_vertex = vertex
+
+    return lowest_t, closest_corner_or_vertex
+
+# Check start and end of a move

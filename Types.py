@@ -39,6 +39,11 @@ class Line:
         self.p1 = Point(self.x1, self.y1)
         self.p2 = Point(self.x2, self.y2)
 
+        self.x_min = min(self.x1, self.x2)
+        self.y_min = min(self.y1, self.y2)
+        self.x_max = max(self.x1, self.x2)
+        self.y_max = max(self.y1, self.y2)
+
     def __eq__(self, other):
         if isinstance(other, Line):
             return self.p1 == other.p1 and self.p2 == other.p2
