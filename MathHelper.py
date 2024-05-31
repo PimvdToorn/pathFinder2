@@ -36,17 +36,17 @@ def line_intersection_t_u(l1: Line, l2: Line) -> tuple[float, float]:
     return t, u
 
 
-def line_intersection_t(line1: Line, line2: Line) -> float:
-    # https://en.wikipedia.org/wiki/Line%E2%80%93line_intersection#:~:text=denominator%20is%20zero.-,Given%20two%20points%20on%20each%20line%20segment,-%5Bedit%5D
-    return (((line1.x1 - line2.x1) * (line2.y1 - line2.y2) -
-             (line1.y1 - line2.y1) * (line2.x1 - line2.x2)) /
-            ((line1.x1 - line1.x2) * (line2.y1 - line2.y2) -
-             (line1.y1 - line1.y2) * (line2.x1 - line2.x2)))
+def line_intersection_t(l1: Line, l2: Line) -> float:
+    try:
+        return (((l1.x1 - l2.x1) * (l2.y1 - l2.y2) - (l1.y1 - l2.y1) * (l2.x1 - l2.x2)) /
+                ((l1.x1 - l1.x2) * (l2.y1 - l2.y2) - (l1.y1 - l1.y2) * (l2.x1 - l2.x2)))
+    except ZeroDivisionError:
+        return float('inf')
 
 
-def line_intersection(line1: Line, line2: Line) -> Point:
-    t = line_intersection_t(line1, line2)
-    return Point(line1.x1 + t * (line1.x2 - line1.x1), line1.y1 + t * (line1.y2 - line1.y1))
+def line_intersection(l1: Line, l2: Line) -> Point:
+    t = line_intersection_t(l1, l2)
+    return Point(l1.x1 + t * (l1.x2 - l1.x1), l1.y1 + t * (l1.y2 - l1.y1))
 
 
 def hit_coords_point_to_line(p: Point, line: Line) -> Point:
@@ -83,31 +83,21 @@ def does_intersect(move: Move, obstacle: Obstacle) -> bool:
         print("Out of bound")
         return False
 
-    for corner in obstacle.corners:
-        if (corner.x < move.x_min or corner.x > move.x_max or
-                corner.y < move.y_min or corner.y > move.y_max):
+    for vertex in obstacle.vertices:
+        if (vertex.x < move.x_min or vertex.x > move.x_max or
+                vertex.y < move.y_min or vertex.y > move.y_max):
             continue
 
-        distance = distance_point_to_line(corner, move.line)
+        distance = distance_point_to_line(vertex, move.line)
         if abs(distance) < move.clearance:
-            print(f"Corner too close: {corner}, distance: {distance}")
+            print(f"vertex too close: {vertex}, distance: {distance}")
             return True
 
-    for vertex in obstacle.vertices:
-        t, u = line_intersection_t_u(move.line, vertex)
+    for edge in obstacle.edges:
+        t, u = line_intersection_t_u(move.line, edge)
         if 0 < t < 1 and 0 < u < 1:
-            print(f"Hit, t: {t}, u: {u}, vertex: {vertex}, at: {line_intersection(move.line, vertex)}")
+            print(f"Hit, t: {t}, u: {u}, edge: {edge}, at: {line_intersection(move.line, edge)}")
             return True
-
-        # for end_point in [move.start, move.end]:
-        #     if (end_point.x + move.clearance < vertex.x_min or end_point.x - move.clearance > vertex.x_max or
-        #             end_point.y + move.clearance < vertex.y_min or end_point.y - move.clearance > vertex.y_max):
-        #         continue
-        #
-        #     distance = distance_point_to_line(end_point, vertex)
-        #     if abs(distance) < move.clearance:
-        #         print(f"End point too close: {end_point}, distance: {distance}, at: {line_intersection(move.line, vertex)}")
-        #         return True
 
     return False
 
@@ -124,34 +114,62 @@ def first_intersection(move: Move, obstacle: Obstacle) -> tuple[float, Any]:
     t_offset = move.clearance / distance_point_to_point(move.start, move.end)
     t_min = 0 - t_offset
     lowest_t = 1 + t_offset
-    closest_corner_or_vertex = None
-
-    for corner in obstacle.corners:
-        if (corner.x < move.x_min or corner.x > move.x_max or
-                corner.y < move.y_min or corner.y > move.y_max):
-            continue
-
-        t = point_to_line_t(corner, move.line)
-        if t_min < t < lowest_t and abs(distance_point_to_line(corner, move.line)) < move.clearance:
-            lowest_t = t
-            closest_corner_or_vertex = corner
+    closest_vertex_or_edge = None
 
     for vertex in obstacle.vertices:
-        t, u = line_intersection_t_u(move.line, vertex)
+        if (vertex.x < move.x_min or vertex.x > move.x_max or
+                vertex.y < move.y_min or vertex.y > move.y_max):
+            continue
+
+        t = point_to_line_t(vertex, move.line)
+        if t_min < t < lowest_t and abs(distance_point_to_line(vertex, move.line)) < move.clearance:
+            lowest_t = t
+            closest_vertex_or_edge = vertex
+
+    for edge in obstacle.edges:
+        t, u = line_intersection_t_u(move.line, edge)
         if 0 < t < lowest_t and 0 < u < 1:
             lowest_t = t
-            closest_corner_or_vertex = vertex
+            closest_vertex_or_edge = edge
 
-        # for end_point in [move.start, move.end]:
-        #     if (end_point.x + move.clearance < vertex.x_min or end_point.x - move.clearance > vertex.x_max or
-        #             end_point.y + move.clearance < vertex.y_min or end_point.y - move.clearance > vertex.y_max):
-        #         continue
-        #
-        #     t = line_intersection_t(move.line, vertex)
-        #     if t_min < t < lowest_t:
-        #         lowest_t = t
-        #         closest_corner_or_vertex = vertex
+    return lowest_t, closest_vertex_or_edge
 
-    return lowest_t, closest_corner_or_vertex
 
 # Check start and end of a move
+def is_point_in_obstacle(p: Point, obstacle: Obstacle, clearance: float) -> bool:
+    if not (obstacle.x_min - clearance <= p.x <= obstacle.x_max + clearance and
+            obstacle.y_min - clearance <= p.y <= obstacle.y_max + clearance):
+        return False
+
+    intersections = 0
+    for vertex in obstacle.vertices:
+        if distance_point_to_point(vertex, p) < clearance:
+            print(f"vertex too close: {vertex}")
+            return True
+
+        if vertex.x == p.x and vertex.y > p.y:
+            other_vertex1, other_vertex2 = obstacle.edges_dict[vertex]
+
+            # Only if the two other vertices are on either side of the vertex,
+            # otherwise the line_up would only touch the vertex
+            if other_vertex1.x < vertex.x < other_vertex2.x or other_vertex1.x > vertex.x > other_vertex2.x:
+                intersections += 1
+                print(f"vertex hit: {vertex}")
+            else:
+                print(f"vertex grace: {vertex}")
+
+    line_up = Line(p, Point(p.x, obstacle.y_max))
+    for edge in obstacle.edges:
+        t, u = line_intersection_t_u(line_up, edge)
+        # Not '<=' to skip hitting vertices
+        if 0 < u < 1:
+            if abs(distance_point_to_line(p, edge)) < clearance:
+                print(f"edge too close: {edge}, dist.: {distance_point_to_line(p, edge)}")
+                return True
+            elif 0 < t:
+                print(f"edge hit: {edge}")
+                intersections += 1
+
+    # print(f"edges: {edges}")
+    print(f"Intersections: {intersections}")
+    return intersections % 2 != 0

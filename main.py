@@ -2,7 +2,7 @@ from Types import L, P
 from objects.Move import Move
 from objects.Field import Field
 from MathHelper import distance_point_to_line, get_slope, hit_coords_point_to_line, Line, does_intersect, \
-    first_intersection, line_intersection
+    first_intersection, line_intersection, is_point_in_obstacle
 from objects.Obstacle import Obstacle
 from objects.Robot import Robot
 
@@ -31,13 +31,32 @@ point_b = P(6, 4)
 # print(hit_coord_point_to_line(point_a, line))
 
 move = Move(1000, line, 0.2)
-obstacle = Obstacle([P(2, 1), P(2, 3), P(6, 4), P(4, 2), P(6, 0)])
-t, closest_corner_or_vertex = first_intersection(move, obstacle)
-print((t, closest_corner_or_vertex))
-if isinstance(closest_corner_or_vertex, Line):
-    print(f"at: {line_intersection(move.line, closest_corner_or_vertex)}")
+obstacle = Obstacle([P(2, 1), P(2, 3), P(6, 4), P(4, 2), P(6, 0), P(4, 1)])
+# t, closest_vertex_or_edge = first_intersection(move, obstacle)
+# print((t, closest_vertex_or_edge))
+# if isinstance(closest_vertex_or_edge, Line):
+#     print(f"at: {line_intersection(move.line, closest_vertex_or_edge)}")
+#
+# print(does_intersect(move, obstacle))
 
-print(does_intersect(move, obstacle))
+points_to_check = [
+    (P(1, 2),    "outside"),
+    (P(3, 2),    "simple inside"),
+    (P(2, 0.5),  "outside below vertical edge"),
+    (P(4, 0),    "outside below vertex with edges left and right"),
+    (P(4, 1.5),  "inside below vertex with edges only right"),
+    (P(5, 2),    "outside above and below polygon"),
+    (P(5, 1),    "on an edge"),
+    (P(4, 3.6),  "too close to an edge"),
+    (P(1.81, 1), "too close to a vertex"),
+]
+
+for point, msg in points_to_check:
+    print("------------------------------------------------------------------")
+    print(is_point_in_obstacle(point, obstacle, 0.2))
+    print(msg)
+
+# print(is_point_in_obstacle(P(5, 2), obstacle, 0.2))
 
 # angle to side of obstacle
 # Direct routes and single steps

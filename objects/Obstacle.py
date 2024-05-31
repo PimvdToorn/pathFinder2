@@ -2,22 +2,26 @@ from Types import Point, Line
 
 
 class Obstacle:
-    def __init__(self, corners: list[Point]):
-        if len(corners) < 3:
-            raise Exception("Obstacle must have at least 3 corners")
+    # Give the vertices in a clockwise fashion
+    def __init__(self, vertices: list[Point]):
+        if len(vertices) < 3:
+            raise Exception("Obstacle must have at least 3 vertices")
 
-        self.corners = corners
-        all_x = [p.x for p in corners]
-        all_y = [p.y for p in corners]
+        self.vertices = vertices
+        all_x = [p.x for p in vertices]
+        all_y = [p.y for p in vertices]
         self.x_min = min(all_x)
         self.x_max = max(all_x)
         self.y_min = min(all_y)
         self.y_max = max(all_y)
 
-        corners_shifted = [corners[-1]] + corners[:-1:]
-        self.vertices: list[Line] = [Line(c1, corners_shifted[index]) for index, c1 in enumerate(corners)]
-        self.vertices_dict = {c: [] for c in corners}
+        vertices_shifted = [vertices[-1]] + vertices[:-1:]
+        self.edges: list[Line] = [Line(c1, vertices_shifted[index]) for index, c1 in enumerate(vertices)]
+        self.edges_dict = {c: [] for c in vertices}
 
-        for vertex in self.vertices:
-            self.vertices_dict[vertex.p1] += [vertex.p2]
-            self.vertices_dict[vertex.p2] += [vertex.p1]
+        for edge in self.edges:
+            self.edges_dict[edge.p1] += [edge.p2]
+            self.edges_dict[edge.p2] += [edge.p1]
+
+        # To consistently get {a: [b, c]} as Line(a, b) and Line(c, a)
+        self.edges_dict[vertices[-1]].reverse()
