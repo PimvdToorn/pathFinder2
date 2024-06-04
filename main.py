@@ -1,8 +1,7 @@
 from Types import L, P
 from objects.Move import Move
 from objects.Field import Field
-from MathHelper import distance_point_to_line, get_slope, hit_coords_point_to_line, Line, does_intersect, \
-    first_intersection, line_intersection, is_point_in_obstacle
+from MathHelper import Line
 from objects.Obstacle import Obstacle
 from objects.Robot import Robot
 
@@ -31,7 +30,7 @@ point_b = P(6, 4)
 # print(hit_coord_point_to_line(point_a, line))
 
 move = Move(1000, line, 0.2)
-obstacle = Obstacle([P(2, 1), P(2, 3), P(6, 4), P(4, 2), P(6, 0), P(4, 1)])
+obstacle = Obstacle([P(2, 1), P(2, 3), P(6, 4), P(4, 2), P(6, 0), P(4, 1)], 0.2)
 # t, closest_vertex_or_edge = first_intersection(move, obstacle)
 # print((t, closest_vertex_or_edge))
 # if isinstance(closest_vertex_or_edge, Line):
@@ -51,10 +50,10 @@ points_to_check = [
     (P(1.81, 1), "too close to a vertex"),
 ]
 
-for point, msg in points_to_check:
-    print("------------------------------------------------------------------")
-    print(is_point_in_obstacle(point, obstacle, 0.2))
-    print(msg)
+# for point, msg in points_to_check:
+#     print("------------------------------------------------------------------")
+#     print(is_point_in_obstacle(point, obstacle, 0.2))
+#     print(msg)
 
 # print(is_point_in_obstacle(P(5, 2), obstacle, 0.2))
 
