@@ -131,51 +131,37 @@ def get_possible_paths(move: Move, field: Field) -> list[list[Move]]:
         return [[move]]
 
     if isinstance(c_v_or_e, Point):
-        # will check around anyway
-        outside_points: list[Point] = [
-            c_obstacle.outside_points_dict[c_v_or_e],
-            # c_obstacle.edges_dict[c_v_or_e][0],
-            # c_obstacle.edges_dict[c_v_or_e][1]
-        ]
+        point = c_obstacle.outside_points_dict[c_v_or_e]
     else:
-        # todo Maybe only one, will check around anyway, and will check direct to other points
-        outside_points = [
-            c_obstacle.outside_points_dict[c_v_or_e.p1],
-            c_obstacle.outside_points_dict[c_v_or_e.p2]
-        ]
+        point = c_obstacle.outside_points_dict[c_v_or_e.p1]
 
     paths: list[list[Move]] = []
-    for point in outside_points:
-        paths_around = []
-        # 0 is counterclockwise
-        for rotation in [0, 1]:
-            new_path = [Move(Line(move.start, point), move.clearance, move.start_time)]
-            move_to_dest = Move(Line(point, move.end), move.clearance, new_path[-1].end_time)
+    # 0 is counterclockwise
+    for rotation in [0, 1]:
+        new_path = [Move(Line(move.start, point), move.clearance, move.start_time)]
+        move_to_dest = Move(Line(point, move.end), move.clearance, new_path[-1].end_time)
 
-            new_point = point
-            while does_intersect(move_to_dest, c_obstacle):
-                new_point = c_obstacle.outside_to_outside_points[new_point][rotation]
-                new_path.append(Move(
-                    Line(move_to_dest.start, new_point),
-                    move.clearance,
-                    new_path[-1].end_time
-                ))
-                move_to_dest = Move(
-                    Line(new_point, move.end),
-                    move.clearance,
-                    new_path[-1].end_time
-                )
+        new_point = point
+        while does_intersect(move_to_dest, c_obstacle):
+            new_point = c_obstacle.outside_to_outside_points[new_point][rotation]
+            new_path.append(Move(
+                Line(move_to_dest.start, new_point),
+                move.clearance,
+                new_path[-1].end_time
+            ))
+            move_to_dest = Move(
+                Line(new_point, move.end),
+                move.clearance,
+                new_path[-1].end_time
+            )
 
-            # Don't append last step, so other function will know to make new move
-            # and check with other obstacles
-            # new_path.append(move_to_dest)
-            paths_around.append(new_path)
+        # Don't append last step, so other function will know to make new move and check with other obstacles
+        # new_path.append(move_to_dest)
+        paths.append(new_path)
 
-            # Don't check other rotation, as the first new step works
-            if new_point == point:
-                break
-
-        paths += paths_around
+        # Don't check other rotation, as the first new step works
+        if new_point == point:
+            break
 
     return paths
 
