@@ -8,6 +8,9 @@ class Obstacle:
         if len(vertices) < 3:
             raise Exception("Obstacle must have at least 3 vertices")
 
+        # For floating point errors
+        clearance = clearance + 0.0001
+
         self.vertices = vertices
         all_x = [p.x for p in vertices]
         all_y = [p.y for p in vertices]
@@ -19,13 +22,14 @@ class Obstacle:
         vertices_shifted = [vertices[-1]] + vertices[:-1:]
         self.edges: list[Line] = [Line(c1, vertices_shifted[index]) for index, c1 in enumerate(vertices)]
 
-        self.edges_dict = {v: [] for v in vertices}
+        self.connected_vertices = {v: [] for v in vertices}
         for edge in self.edges:
-            self.edges_dict[edge.p1] += [edge.p2]
-            self.edges_dict[edge.p2] += [edge.p1]
+            self.connected_vertices[edge.p1] += [edge.p2]
+            self.connected_vertices[edge.p2] += [edge.p1]
 
         # To consistently get {a: [b, c]} as Line(a, b) and Line(c, a)
-        self.edges_dict[vertices[-1]].reverse()
+        # b is counterclockwise, c clockwise
+        self.connected_vertices[vertices[-1]].reverse()
 
         self.slopes_dict = {e: float('inf') for e in self.edges}
         for edge in self.edges:
@@ -75,9 +79,17 @@ class Obstacle:
 
         self.outside_points_dict = {v: Point(0, 0) for v in vertices}
         for vertex in self.vertices:
-            v1, v2 = self.edges_dict[vertex]
+            v1, v2 = self.connected_vertices[vertex]
             l1 = Line(vertex, v1)
             l2 = Line(v2, vertex)
             ol1 = self.outside_lines_dict[l1]
             ol2 = self.outside_lines_dict[l2]
             self.outside_points_dict[vertex] = line_intersection(ol1, ol2)
+
+        self.outside_to_outside_points = {
+            self.outside_points_dict[v]: [
+                self.outside_points_dict[self.connected_vertices[v][0]],
+                self.outside_points_dict[self.connected_vertices[v][1]]
+            ]
+            for v in vertices
+        }

@@ -1,3 +1,6 @@
+from math import sqrt
+
+
 class Point:
     def __init__(self, *args):
         if args[0] is tuple:
@@ -20,8 +23,13 @@ class Point:
     def __str__(self):
         return f"P({self.x:.2f}, {self.y:.2f})"
 
+    def bare_str(self):
+        return f"({self.x}, {self.y})"
+
 
 class Line:
+    _len = None
+
     def __init__(self, *args):
         if isinstance(args[0], Point):
             self.x1 = args[0].x
@@ -59,6 +67,20 @@ class Line:
 
     def __str__(self):
         return f"L({self.p1}, {self.p2})"
+
+    @property
+    def len(self) -> float:
+        if self._len is not None:
+            return self._len
+        self._len = sqrt((self.x2 - self.x1) ** 2 + (self.y2 - self.y1) ** 2)
+        return self._len
+
+    @property
+    def slope(self) -> float:
+        try:
+            return (self.y2 - self.y1) / (self.x2 - self.x1)
+        except ZeroDivisionError:
+            return float('inf')
 
 
 P = Point

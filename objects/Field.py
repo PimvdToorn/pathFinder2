@@ -11,10 +11,11 @@ class Field:
     def __init__(self, size: tuple[float, float]) -> None:
         self.size = size
 
-    def add(self, robot: Robot) -> None:
+    def add_robot(self, robot: Robot) -> None:
         self.robots.append(robot)
 
-    # def pathFind(self, robot: Robot, destination: tuple[int, int]):
+    def add_obstacle(self, obstacle: Obstacle) -> None:
+        self.obstacles.append(obstacle)
 
 
 def millis() -> int:
