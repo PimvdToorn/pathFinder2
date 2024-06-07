@@ -1,5 +1,5 @@
 from MathHelper import distance_point_to_point, line_intersection, distance_point_to_line, point_to_line_t_slope
-from Types import Point, Line
+from Types import Point, Line, P
 
 
 class Obstacle:
@@ -84,6 +84,10 @@ class Obstacle:
             l2 = Line(v2, vertex)
             ol1 = outside_lines_dict[l1]
             ol2 = outside_lines_dict[l2]
+
+            if self.slopes_dict[l1] == self.slopes_dict[l2]:
+                ol2 = Line(vertex, P(vertex.x + 1, vertex.y + self.slopes_dict_inv[l1]))
+
             self.outside_points_dict[vertex] = line_intersection(ol1, ol2)
 
         self.outside_to_outside_points = {
