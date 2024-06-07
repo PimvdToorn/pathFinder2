@@ -1,6 +1,4 @@
-from math import sqrt
-
-from PathFinder import get_possible_paths, reduce_path, pathfind
+from PathFinder import get_possible_paths, reduce_path, pathfind, first_intersection
 from Types import L, P
 from objects.Move import Move, steps_str
 from objects.Field import Field
@@ -17,13 +15,11 @@ field.add_robot(robot1)
 field.add_obstacles([
     Obstacle([P(2, 1), P(2, 3), P(6, 4), P(4, 2), P(6, 0), P(4, 1)], clearance),
     Obstacle([P(9, 3), P(6, 6), P(7, 7)], clearance),
-    Obstacle([P(5, 5), P(2, 5), P(1, 7), P(3, 9), P(10, 9), P(10, 8), P(3.5, 7.5), P(4, 6)], clearance),
-    # Obstacle([P(5, 5), P(2, 5), P(1, 7), P(3, 9), P(3.5, 7.5), P(4, 6)], clearance),
-    # Obstacle([P(3, 9), P(10, 9), P(10, 8), P(3.5, 7.5)], clearance),
+    Obstacle([P(5, 5), P(2, 5), P(1, 7), P(3, 9), P(10, 9), P(10, 8), P(3.5, 7.5), P(4, 6)], clearance)
 ])
 
-start = P(1.8, 2)
-end = P(5.5, 2)
+start = P(4, 9.5)
+end = P(6, 5)
 
 line = L(start, end)
 move = Move(line, clearance)

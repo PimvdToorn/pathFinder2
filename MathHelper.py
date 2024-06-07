@@ -1,4 +1,5 @@
 from math import sqrt
+from typing import Iterable
 
 from Types import Point, Line
 
@@ -9,6 +10,14 @@ def distance_point_to_point(p1: Point, p2: Point) -> float:
 
 def distance_point_to_point2(p1: Point, p2: Point) -> float:
     return (p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2
+
+
+def get_closest_point(p: Point, points: Iterable[Point]) -> Point:
+    return min(points, key=lambda x: distance_point_to_point2(p, x))
+
+
+def get_furthest_point(p: Point, points: Iterable[Point]) -> Point:
+    return max(points, key=lambda x: distance_point_to_point2(p, x))
 
 
 def distance_point_to_line(point: Point, line: Line) -> float:

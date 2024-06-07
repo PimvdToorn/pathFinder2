@@ -1,7 +1,7 @@
 from typing import Any
 
 from MathHelper import distance_point_to_line, line_intersection_t_u, line_intersection, distance_point_to_point, \
-    point_to_line_t_slope, get_tangent_points, distance_point_to_point2
+    point_to_line_t_slope, get_tangent_points, distance_point_to_point2, get_closest_point, get_furthest_point
 from Types import Point, Line
 from objects.Field import Field
 from objects.Move import Move, steps_str
@@ -133,7 +133,7 @@ def get_possible_paths(move: Move, field: Field) -> list[list[Move]]:
     if isinstance(c_v_or_e, Point):
         point = c_v_or_e
     else:
-        point = c_v_or_e.p1
+        point = get_closest_point(move.start, [c_v_or_e.p1, c_v_or_e.p2])
 
     o_point = c_obstacle.outside_points_dict[point]
 
@@ -162,6 +162,7 @@ def get_possible_paths(move: Move, field: Field) -> list[list[Move]]:
         if new_o_point == o_point and c_obstacle.is_acute[point]:
             closest_point = get_closest_to_acute_vertex(move.start, move.end, point, c_obstacle.clearance)
             new_path = [Move(Line(move.start, closest_point), move.clearance, move.start_time)]
+        # todo for acute angle as first or last step
 
         # Don't append last step, so other function will know to make new move and check with other obstacles
         # new_path.append(move_to_dest)
@@ -170,9 +171,10 @@ def get_possible_paths(move: Move, field: Field) -> list[list[Move]]:
         if new_path:
             paths.append(new_path)
 
-        # Don't check other rotation, as the first new step works
-        if new_o_point == o_point:
-            break
+        # # Don't check other rotation, as the first new step works
+        # if new_o_point == o_point:
+        #     print(f"First step works: {steps_str(new_path)}")
+        #     break
 
     return paths
 
@@ -182,12 +184,8 @@ def get_closest_to_acute_vertex(p1: Point, p2: Point, v: Point, clearance: float
     tps2 = get_tangent_points(p2, v, clearance)
 
     # Take the outermost tangent point
-    tp1 = tps1[0] \
-        if distance_point_to_point2(tps1[0], p2) > distance_point_to_point2(tps1[1], p2) \
-        else tps1[1]
-    tp2 = tps2[0] \
-        if distance_point_to_point2(tps2[0], p1) > distance_point_to_point2(tps2[1], p1) \
-        else tps2[1]
+    tp1 = get_furthest_point(p2, tps1)
+    tp2 = get_furthest_point(p1, tps2)
 
     return line_intersection(Line(p1, tp1), Line(p2, tp2))
 
@@ -224,8 +222,8 @@ def reduce_path(path: list[Move], field: Field) -> list[Move]:
         if intersects:
             for obstacle in field.obstacles:
                 if does_intersect(path[checking_index], obstacle):
-                    print(f"Existing move intersects: {path[checking_index]}")
-                    return []
+                    print(f"Existing move intersects: {path[checking_index]}, path: {steps_str(path)}")
+                    return path[:checking_index]
             new_path.insert(checking_index, path[checking_index])
 
         checking_index += 1
@@ -260,15 +258,15 @@ def pathfind(move: Move, field: Field) -> list[Move]:
                 paths_next_loop.append(path)
                 continue
 
-            new_move = Move(
+            new_move_to_dest = Move(
                 Line(path[-1].end, destination),
                 move.clearance,
                 path[-1].end_time
             )
 
-            new_paths = get_possible_paths(new_move, field)
+            new_paths = get_possible_paths(new_move_to_dest, field)
             # print(f"New paths:")
-            if new_paths == [[new_move]]:
+            if new_paths == [[new_move_to_dest]]:
                 destination_reached = True
             for new_path in new_paths:
                 new_path = reduce_path(path + new_path, field)
@@ -286,13 +284,13 @@ def pathfind(move: Move, field: Field) -> list[Move]:
                         shortest_theoretical_path = path[-1].end_time
                         shortest_path = path
                 elif destination_reached_loops < 4:
-                    new_move = Move(
+                    new_move_to_dest = Move(
                         Line(path[-1].end, destination),
                         move.clearance,
                         path[-1].end_time
                     )
-                    if new_move.end_time < shortest_theoretical_path:
-                        shortest_theoretical_path = new_move.end_time
+                    if new_move_to_dest.end_time < shortest_theoretical_path:
+                        shortest_theoretical_path = new_move_to_dest.end_time
                         shortest_path = []
 
             if shortest_path:
