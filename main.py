@@ -1,9 +1,10 @@
-from math import sqrt
+from math import sqrt, cos, acos
 
-from MathHelper import distance_point_to_point, line_intersection, line_intersection_t, line_intersection_t_u
-from PathFinder import pathfind
+from MathHelper import distance_point_to_point, line_intersection, line_intersection_t, line_intersection_t_u, \
+    cos_angle_between_lines, leg_from_base_and_lines
+from PathFinder import pathfind, first_robot_intersection
 from Types import L, P
-from objects.Move import Move, steps_str, min_distance
+from objects.Move import Move, steps_str, min_distance, list_str
 from objects.Field import Field
 from objects.Obstacle import Obstacle
 from objects.Robot import Robot
@@ -21,57 +22,34 @@ field.add_obstacles([
 ])
 
 start = P(4, 9.5)
-end = P(6, 5)
+end = P(8, 0)
 
 line = L(start, end)
 move = Move(line, clearance)
 
 # path = pathfind(move, field)
 # print(steps_str(path))
-# print(path)
-# print(path[-1].end_time)
-
-
-# paths = get_possible_paths(move, field)
-# for path in paths:
-#     print(steps_str(path))
-#     print(path)
-#     print("-------------------------------------------------------------")
-#     path = reduce_path(path, field)
-#     print(steps_str(path))
-#     print(path)
-#     print()
-#     print("=============================================================")
-#     print()
-
-# print(reduce_path([move], field))
-
-
+# print(list_str(path))
+# # print(path[-1].end_time)
+# robot1.path = path  #+ [Move(L(path[-1].end, P(8, -4)), clearance, path[-1].end_time)]
+# print(robot1.path)
 # angle to side of obstacle
 # Direct routes and single steps
 
-m1 = Move(L(2, 3, 1, 0), 0.2, 0, 0.001)
-m2 = Move(L(2, 0, 0, 3), 0.2, 4000, 0.002)
+# m1 = Move(L(12.7, 0, 7, 0.2), 0.2, 11478.501075915352)
 
-min_dist, t = min_distance(m1, m2)
-print(f"min_dist: {min_dist}, t: {t}")
+# t, move = first_robot_intersection(m1, robot1)
+# print(f"t: {t-11478.501075915352}")
+# print(f"move: {move.__repr__()}")
 
-
-# def tr(m: Move):
-#     return lambda t: t/m.line.len
+# m1 = Move(L(2, 3, 0.5, 0), 0.2, 0, 1)
+# m2 = Move(L(2, 0, 0, 3), 0.2, 0, 1)
 #
-#
-# def pr(m: Move):
-#     return lambda t: m.start + (m.end-m.start) * (t/m.line.len)
-#
-#
-# def dt(m1: Move, m2: Move):
-#     # p1x = m1.x1 + (m1.x2-m1.x1) * (t/m1.line.len)
-#     # p1y = m1.y1 + (m1.y2-m1.y1) * (t/m1.line.len)
-#     # p2x = m2.x1 + (m2.x2-m2.x1) * (t/m2.line.len)
-#     # p2y = m2.y1 + (m2.y2-m2.y1) * (t/m2.line.len)
-#     return lambda t: distance_point_to_point(pr(m1)(t), pr(m2)(t))
+# d, t = min_distance(m1, m2)
+# print(f"d: {d}, t: {t}")
 
-
-
-
+base = 0.4
+l1 = L(-1, 1, 1, -1)
+l2 = L(-1, 0, 1, 0)
+a = leg_from_base_and_lines(base, l1, l2)
+print(a*2)

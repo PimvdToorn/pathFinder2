@@ -109,3 +109,26 @@ def get_tangent_points(p: Point, c: Point, radius: float) -> tuple[Point, Point]
     x1 = Point(p.x + (dx * d - dy * h) / pc, p.y + (dy * d + dx * h) / pc)
     x2 = Point(p.x + (dx * d + dy * h) / pc, p.y + (dy * d - dx * h) / pc)
     return x1, x2
+
+
+def dot_product(p1: Point, p2: Point) -> float:
+    return p1.x * p2.x + p1.y * p2.y
+
+
+def dot_product_lines(l1: Line, l2: Line) -> float:
+    return dot_product(Point(l1.x2 - l1.x1, l1.y2 - l1.y1), Point(l2.x2 - l2.x1, l2.y2 - l2.y1))
+
+
+def cos_angle_between_lines(l1: Line, l2: Line) -> float:
+    return dot_product_lines(l1, l2) / (l1.len * l2.len)
+
+
+# Gives the length of the leg of an isosceles triangle
+def leg_from_base_and_cos_angle(base: float, cos_angle: float) -> float:
+    return (base / 2) / sqrt((1 - cos_angle) / 2)
+
+
+# Gives the length of the leg of an isosceles triangle formed by two lines and a base
+# It's -cos_angle because at the outer angle the second robot is still moving towards the first
+def leg_from_base_and_lines(base: float, l1: Line, l2: Line) -> float:
+    return leg_from_base_and_cos_angle(base, -cos_angle_between_lines(l1, l2))
