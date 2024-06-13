@@ -38,6 +38,8 @@ class Point:
 
 class Line:
     _len = None
+    _slope = None
+    _slope_inv = None
 
     def __init__(self, *args):
         if isinstance(args[0], Point):
@@ -79,17 +81,30 @@ class Line:
 
     @property
     def len(self) -> float:
-        if self._len is not None:
-            return self._len
-        self._len = sqrt((self.x2 - self.x1) ** 2 + (self.y2 - self.y1) ** 2)
+        if self._len is None:
+            self._len = sqrt((self.x2 - self.x1) ** 2 + (self.y2 - self.y1) ** 2)
         return self._len
 
     @property
     def slope(self) -> float:
-        try:
-            return (self.y2 - self.y1) / (self.x2 - self.x1)
-        except ZeroDivisionError:
-            return float('inf')
+        if self._slope is None:
+            try:
+                self._slope = (self.y2 - self.y1) / (self.x2 - self.x1)
+            except ZeroDivisionError:
+                self._slope = float('inf')
+        return self._slope
+
+    @property
+    def slope_inv(self) -> float:
+        if self._slope_inv is None:
+            try:
+                self._slope_inv = -1 / self.slope
+            except ZeroDivisionError:
+                self._slope_inv = float('inf')
+        return self._slope_inv
+
+    def location_at_t(self, t: float) -> Point:
+        return self.p1 + (self.p2 - self.p1) * t
 
 
 P = Point

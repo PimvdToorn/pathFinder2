@@ -1,9 +1,10 @@
-from MathHelper import line_intersection_t_u, distance_point_to_point
+from MathHelper import line_intersection_t_u, distance_point_to_point, point_to_line_t
 from Types import Line, Point
 
 
 class Move:
-    def __init__(self, line: Line, clearance: float, start_time: float = 0.0):  # , speed: float = 0.001):
+    def __init__(self, line: Line, clearance: float, start_time: float = 0.0, end_time: float = 0.0):  # , speed: float = 0.001):
+        self.waiting = line.len == 0
         self.x1 = line.x1
         self.y1 = line.y1
         self.x2 = line.x2
@@ -12,23 +13,18 @@ class Move:
         self.start_time = start_time
         # self.speed = speed
         self.speed = 0.001
-        self.end_time = start_time + self.line.len/self.speed
+        if line.len == 0:
+            self.speed = 0.0
+        if end_time == 0.0:
+            self.end_time = start_time + self.line.len/self.speed
+        else:
+            self.end_time = end_time
 
         self.clearance = clearance
         self.x_min = min(self.x1, self.x2) - clearance
         self.y_min = min(self.y1, self.y2) - clearance
         self.x_max = max(self.x1, self.x2) + clearance
         self.y_max = max(self.y1, self.y2) + clearance
-
-        try:
-            self.slope = (self.y2 - self.y1) / (self.x2 - self.x1)
-        except ZeroDivisionError:
-            self.slope = float('inf')
-
-        try:
-            self.slope_inv = -1 / self.slope
-        except ZeroDivisionError:
-            self.slope_inv = float('inf')
 
     def __repr__(self) -> str:
         return f"Move({self.start_time}, {self.end_time}, {self.start}, {self.end})"
@@ -54,6 +50,14 @@ class Move:
         return self.start + (self.end - self.start) * path_completion_level
 
 
+def get_wait_move(at: Point, clearance: float, start_time: float, wait_time: float) -> Move:
+    return Move(Line(at, at), clearance, start_time, start_time + wait_time)
+
+
+def get_wait_after_move(move: Move, until_time: float) -> Move:
+    return Move(Line(move.end, move.end), move.clearance, move.end_time, until_time)
+
+
 # Used to copy into https://www.Desmos.com/calculator
 def steps_str(moves: list[Move]) -> str:
     if not moves:
@@ -72,6 +76,16 @@ def list_str(moves: list[Move]) -> str:
 
 
 def min_distance(m1: Move, m2: Move) -> tuple[float, float]:
+    if m1.waiting or m2.waiting:
+        if m1.waiting and m2.waiting:
+            return distance_point_to_point(m1.start, m2.start), m1.start_time
+        waiting = m1 if m1.waiting else m2
+        moving = m1 if not m1.waiting else m2
+        t = point_to_line_t(waiting.start, moving.line)
+        t = max(0.0, min(1.0, t))
+        return (distance_point_to_point(waiting.start, moving.line.location_at_t(t)),
+                moving.start_time + t * moving.line.len / moving.speed)
+
     t, u = line_intersection_t_u(m1.line, m2.line)
     time1 = t * m1.line.len / m1.speed + m1.start_time
     time2 = u * m2.line.len / m2.speed + m2.start_time

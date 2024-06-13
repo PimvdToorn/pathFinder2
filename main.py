@@ -13,26 +13,32 @@ field = Field((3000, 3000))
 
 clearance = 0.2
 robot1 = Robot("R1", 0x01, clearance)
-field.add_robot(robot1)
+robot2 = Robot("R2", 0x02, clearance)
+field.add_robots([robot1, robot2])
 
 field.add_obstacles([
     Obstacle([P(2, 1), P(2, 3), P(6, 4), P(4, 2), P(6, 0), P(4, 1)], clearance),
     Obstacle([P(9, 3), P(6, 6), P(7, 7)], clearance),
-    Obstacle([P(5, 5), P(2, 5), P(1, 7), P(3, 9), P(10, 9), P(10, 8), P(3.5, 7.5), P(4, 6)], clearance)
+    Obstacle( [P(5, 5), P(2, 5), P(1, 7), P(3, 9), P(10, 9), P(10, 8), P(3.5, 7.5), P(4, 6)], clearance)
 ])
 
-start = P(4, 9.5)
-end = P(8, 0)
+start = P(0, 1)
+end = P(0, -1)
 
 line = L(start, end)
 move = Move(line, clearance)
 
-# path = pathfind(move, field)
-# print(steps_str(path))
-# print(list_str(path))
-# # print(path[-1].end_time)
-# robot1.path = path  #+ [Move(L(path[-1].end, P(8, -4)), clearance, path[-1].end_time)]
-# print(robot1.path)
+path = pathfind(move, field)
+print(steps_str(path))
+print(path)
+# print(path[-1].end_time)
+robot1.path = path  # + [Move(L(path[-1].end, P(8, -4)), clearance, path[-1].end_time)]
+
+move2 = robot2.create_move(L(P(-1.1, 0), P(1, 0)), 0)
+path2 = pathfind(move2, field)
+print(steps_str(path2))
+print(path2)
+
 # angle to side of obstacle
 # Direct routes and single steps
 
@@ -48,8 +54,8 @@ move = Move(line, clearance)
 # d, t = min_distance(m1, m2)
 # print(f"d: {d}, t: {t}")
 
-base = 0.4
-l1 = L(-1, 1, 1, -1)
-l2 = L(-1, 0, 1, 0)
-a = leg_from_base_and_lines(base, l1, l2)
-print(a*2)
+# base = 0.4
+# l1 = L(0, 1, 0, -1)
+# l2 = L(-1, 0, 1, 0)
+# a = leg_from_base_and_lines(base, l1, l2)
+# print(a*2)

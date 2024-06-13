@@ -1,10 +1,11 @@
 from typing import Any
 
 from MathHelper import distance_point_to_line, line_intersection_t_u, line_intersection, distance_point_to_point, \
-    point_to_line_t_slope, get_tangent_points, distance_point_to_point2, get_closest_point, get_furthest_point
+    get_tangent_points, distance_point_to_point2, get_closest_point, get_furthest_point, \
+    leg_from_base_and_lines, point_to_line_t, line_intersection_t
 from Types import Point, Line
 from objects.Field import Field
-from objects.Move import Move, steps_str, min_distance
+from objects.Move import Move, steps_str, min_distance, get_wait_move
 from objects.Obstacle import Obstacle
 from objects.Robot import Robot
 
@@ -56,7 +57,7 @@ def first_obstacle_intersection(move: Move, obstacle: Obstacle) -> tuple[float, 
                 vertex.y < move.y_min or vertex.y > move.y_max):
             continue
 
-        t = point_to_line_t_slope(vertex, move.line, move.slope_inv)
+        t = point_to_line_t(vertex, move.line)
         if t_min < t < lowest_t and abs(distance_point_to_line(vertex, move.line)) < move.clearance:
             lowest_t = t
             closest_vertex_or_edge = vertex
@@ -83,6 +84,11 @@ def first_robot_intersection(move: Move, robot: Robot) -> tuple[float, Move]:
             continue
 
         min_dist, t = min_distance(move, r_move)
+        # print(f"move: {move}, r_move: {r_move}")
+        # print(f"min_dist: {min_dist}, t: {t}")
+        # print(f"clearance: {move.clearance + r_move.clearance}")
+        # print(f"{min_dist < move.clearance + r_move.clearance}")
+        # print(f"Robot: {robot.name}, path: {steps_str(robot.path)}")
         if min_dist == float('nan'):
             continue
         if min_dist < move.clearance + r_move.clearance and t < lowest_t:
@@ -139,7 +145,19 @@ def path_around_obstacle(move: Move, obstacle: Obstacle, c_v_or_e: Point | Line,
 
 
 def path_around_robot(move: Move, r_move: Move, robot: Robot, field: Field) -> list[list[Move]]:
-    return []
+    clearance = move.clearance + r_move.clearance
+    t_offset = (leg_from_base_and_lines(clearance, move.line, r_move.line) * 2) / r_move.speed
+
+    def time_at_intersection(m: Move, line: Line) -> float:
+        t = line_intersection_t(m.line, line)
+        return t * m.line.len / m.speed + m.start_time
+
+    r_time_at_intersection = time_at_intersection(r_move, move.line)
+    move_time_at_intersection = time_at_intersection(move, r_move.line)
+    move_offset = t_offset - move_time_at_intersection + r_time_at_intersection
+
+    wait_move = get_wait_move(move.start, clearance, move.start_time, move_offset)
+    return get_possible_paths(wait_move, field)
 
 
 # Returns the possible paths around the first obstacle hit, or the same move if possible
@@ -192,21 +210,33 @@ def reduce_path(path: list[Move], field: Field) -> list[Move]:
         path = new_path
         new_path = path[:checking_index]
 
+        if path[checking_index].waiting:
+            new_path.append(path[checking_index])
+            if len(path) >= checking_index + 2:
+                new_path.append(path[checking_index + 1])
+            # print(f"Reduce path new path: {new_path}")
+            checking_index += 1
+            continue
+
         intersects = True
         for move in path[:checking_index:-1]:
+            # if move.waiting:
+            #     continue
+            # print(f"Checking move: {move}")
             intersects = False
             new_move = Move(
                 Line(path[checking_index].start, move.end),
                 path[checking_index].clearance,
                 path[checking_index].start_time
             )
+            # print(f"Checking new move: {new_move}")
             for obstacle in field.obstacles:
                 if does_intersect(new_move, obstacle):
                     # New move is not possible, try the next
                     intersects = True
                     new_path.insert(checking_index, move)
                     break
-
+            # print(f"Intersects: {intersects}")
             if not intersects:
                 # New move is possible, add it and continue to the next
                 new_path.insert(checking_index, new_move)
@@ -286,9 +316,10 @@ def pathfind(move: Move, field: Field) -> list[Move]:
         destination_reached = False
         for path in paths:
             # print("----------------------------------------------------------")
-            # print(f"Path: {steps_str(path)}")
+            # print(f"Path: {path}")
             if path[-1].end == destination:
                 destination_reached = True
+                # input("Destination reached")
                 paths_next_loop.append(path)
                 continue
 
@@ -299,11 +330,13 @@ def pathfind(move: Move, field: Field) -> list[Move]:
             )
 
             new_paths = get_possible_paths(new_move_to_dest, field)
-            # print(f"New paths:")
+            # print(f"New paths: {new_paths}")
             if new_paths == [[new_move_to_dest]]:
                 destination_reached = True
+                # input("Destination reached other")
             for new_path in new_paths:
                 new_path = reduce_path(path + new_path, field)
+                # print(f"new_path: {new_path}")
                 # print(f"    {steps_str(new_path)}")
                 paths_next_loop.append(new_path)
 
@@ -312,8 +345,9 @@ def pathfind(move: Move, field: Field) -> list[Move]:
             shortest_theoretical_path = float('inf')
             shortest_path = []
             for path in paths_next_loop:
+                # print(f"Path: {path}")
                 if path[-1].end == destination:
-                    print(f"Destination reached in {path[-1].end_time}: {steps_str(path)}")
+                    # print(f"Destination reached in {path[-1].end_time}: {steps_str(path)}")
                     if path[-1].end_time < shortest_theoretical_path:
                         shortest_theoretical_path = path[-1].end_time
                         shortest_path = path

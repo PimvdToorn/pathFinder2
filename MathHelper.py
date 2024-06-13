@@ -72,23 +72,12 @@ def line_intersection(l1: Line, l2: Line) -> Point:
 #     return Point(p.x + t, p.y + t * perpendicular_slope)
 
 
-# def point_to_line_t(p: Point, line: Line) -> float:
-#     try:
-#         perpendicular_slope = -1 / get_slope(line)
-#     except ZeroDivisionError:
-#         # Slope is 0, so p.x as a part (percentage) from x1 to x2
-#         return (line.x2 - p.x) / (line.x2 - line.x1)
-#
-#     p_line = Line(p, Point(p.x + 1, p.y + perpendicular_slope))
-#     return line_intersection_t(line, p_line)
-
-
-def point_to_line_t_slope(p: Point, line: Line, slope_inv: float) -> float:
-    if slope_inv == float('inf'):
+def point_to_line_t(p: Point, line: Line) -> float:
+    if line.slope_inv == float('inf'):
         # Slope is 0, so p.x as a part (percentage) from x1 to x2
         return (line.x2 - p.x) / (line.x2 - line.x1)
 
-    p_line = Line(p, Point(p.x + 1, p.y + slope_inv))
+    p_line = Line(p, Point(p.x + 1, p.y + line.slope_inv))
     return line_intersection_t(line, p_line)
 
 

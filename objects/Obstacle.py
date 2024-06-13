@@ -1,4 +1,4 @@
-from MathHelper import distance_point_to_point, line_intersection, distance_point_to_line, point_to_line_t_slope
+from MathHelper import distance_point_to_point, line_intersection, distance_point_to_line, point_to_line_t
 from Types import Point, Line, P
 
 
@@ -31,17 +31,6 @@ class Obstacle:
         # b is counterclockwise, c clockwise
         self.connected_vertices[vertices[-1]].reverse()
 
-        self.slopes_dict = {e: float('inf') for e in self.edges}
-        for edge in self.edges:
-            try:
-                self.slopes_dict[edge] = (
-                        (edge.y2 - edge.y1) / (edge.x2 - edge.x1))
-            except ZeroDivisionError:
-                self.slopes_dict[edge] = float('inf')
-
-        self.slopes_dict_inv: dict[Line, float] = \
-            {e: -1/s if s != 0 else float('inf') for e, s in self.slopes_dict.items()}
-
         outside_lines_dict = {e: Line(0, 0, 0, 0) for e in self.edges}
         for edge in outside_lines_dict:
             if edge.x1 == edge.x2:
@@ -60,21 +49,21 @@ class Obstacle:
                 continue
 
             if edge.y1 > edge.y2:
-                outside_p_far = Point(edge.x1 - 1, edge.y1 - self.slopes_dict_inv[edge])
+                outside_p_far = Point(edge.x1 - 1, edge.y1 - edge.slope_inv)
                 distance_relative = self.clearance / distance_point_to_point(outside_p_far, edge.p1)
                 outside_p1 = Point(
                     edge.x1 - distance_relative,
-                    edge.y1 - distance_relative * self.slopes_dict_inv[edge]
+                    edge.y1 - distance_relative * edge.slope_inv
                 )
             else:
-                outside_p_far = Point(edge.x1 + 1, edge.y1 + self.slopes_dict_inv[edge])
+                outside_p_far = Point(edge.x1 + 1, edge.y1 + edge.slope_inv)
                 distance_relative = self.clearance / distance_point_to_point(outside_p_far, edge.p1)
                 outside_p1 = Point(
                     edge.x1 + distance_relative,
-                    edge.y1 + distance_relative * self.slopes_dict_inv[edge]
+                    edge.y1 + distance_relative * edge.slope_inv
                 )
 
-            outside_p2 = Point(outside_p1.x + 1, outside_p1.y + self.slopes_dict[edge])
+            outside_p2 = Point(outside_p1.x + 1, outside_p1.y + edge.slope)
             outside_lines_dict[edge] = Line(outside_p1, outside_p2)
 
         self.outside_points_dict = {v: Point(0, 0) for v in vertices}
@@ -85,8 +74,8 @@ class Obstacle:
             ol1 = outside_lines_dict[l1]
             ol2 = outside_lines_dict[l2]
 
-            if self.slopes_dict[l1] == self.slopes_dict[l2]:
-                ol2 = Line(vertex, P(vertex.x + 1, vertex.y + self.slopes_dict_inv[l1]))
+            if l1.slope == l2.slope:
+                ol2 = Line(vertex, P(vertex.x + 1, vertex.y + l1.slope_inv))
 
             self.outside_points_dict[vertex] = line_intersection(ol1, ol2)
 
@@ -99,14 +88,9 @@ class Obstacle:
         }
 
         self.is_acute = {
-            v: point_to_line_t_slope(
+            v: point_to_line_t(
                 self.connected_vertices[v][0],
-                Line(self.connected_vertices[v][1], v),
-                self.slopes_dict_inv[Line(self.connected_vertices[v][1], v)]
+                Line(self.connected_vertices[v][1], v)
             ) < 1
             for v in self.vertices
         }
-
-        # for op in self.outside_points_dict.values():
-        #     print(f"{op.bare_str()},", end="")
-        # print()
