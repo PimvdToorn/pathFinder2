@@ -1,3 +1,4 @@
+from Types import Point
 from objects.Move import Move
 
 
@@ -17,19 +18,12 @@ class Robot:
             if move.end_time > time:
                 return move
 
-    def get_location(self, time: int) -> tuple:
+    def get_location(self, time: int) -> Point:
         if not self.path:
-            return self.x, self.y
+            return Point(self.x, self.y)
 
-        move_start_time = 0
         for move in self.path:
             if move.end_time > time:
-                # completion of 0.6 means this move is 60% done
-                path_completion_level = (time-move_start_time)/(move.end_time-move_start_time)
-                self.x = move.x2 * path_completion_level + move.x1 * (1-path_completion_level)
-                self.y = move.y2 * path_completion_level + move.y1 * (1-path_completion_level)
-                return self.x, self.y
-
-            move_start_time = move.end_time
+                return move.location_at_time(time)
 
         return self.path[-1].end

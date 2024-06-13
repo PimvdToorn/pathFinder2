@@ -4,7 +4,7 @@ from MathHelper import distance_point_to_line, line_intersection_t_u, line_inter
     point_to_line_t_slope, get_tangent_points, distance_point_to_point2, get_closest_point, get_furthest_point
 from Types import Point, Line
 from objects.Field import Field
-from objects.Move import Move, steps_str
+from objects.Move import Move, steps_str, min_distance
 from objects.Obstacle import Obstacle
 from objects.Robot import Robot
 
@@ -38,13 +38,12 @@ def does_intersect(move: Move, obstacle: Obstacle) -> bool:
     return False
 
 
-def first_intersection(move: Move, obstacle: Obstacle) -> tuple[float, Any]:
+def first_obstacle_intersection(move: Move, obstacle: Obstacle) -> tuple[float, Any]:
     # Check the "bounding box"
-    if not (
-            move.x_min < obstacle.x_max and
-            move.x_max > obstacle.x_min and
-            move.y_min < obstacle.y_max and
-            move.y_max > obstacle.y_min):
+    if move.x_min > obstacle.x_max or \
+            move.x_max < obstacle.x_min or \
+            move.y_min > obstacle.y_max or \
+            move.y_max < obstacle.y_min:
         return float('inf'), None
 
     t_offset = move.clearance / distance_point_to_point(move.start, move.end)
@@ -71,71 +70,35 @@ def first_intersection(move: Move, obstacle: Obstacle) -> tuple[float, Any]:
     return lowest_t, closest_vertex_or_edge
 
 
-# Check start and end of a move
-def is_point_in_obstacle(p: Point, obstacle: Obstacle, clearance: float) -> bool:
-    if not (obstacle.x_min - clearance <= p.x <= obstacle.x_max + clearance and
-            obstacle.y_min - clearance <= p.y <= obstacle.y_max + clearance):
-        return False
+def first_robot_intersection(move: Move, robot: Robot) -> tuple[float, Move]:
+    lowest_t = float('inf')
+    lowest_t_move = None
+    for r_move in robot.path:
+        if move.x_min > r_move.x_max or \
+                move.x_max < r_move.x_min or \
+                move.y_min > r_move.y_max or \
+                move.y_max < r_move.y_min:
+            continue
+        if r_move.start_time > move.end_time or r_move.end_time < move.start_time:
+            continue
 
-    intersections = 0
-    for vertex in obstacle.vertices:
-        if distance_point_to_point(vertex, p) < clearance:
-            # print(f"vertex too close: {vertex}")
-            return True
+        min_dist, t = min_distance(move, r_move)
+        if min_dist == float('nan'):
+            continue
+        if min_dist < move.clearance + r_move.clearance and t < lowest_t:
+            lowest_t = t
+            lowest_t_move = r_move
 
-        if vertex.x == p.x and vertex.y > p.y:
-            other_vertex1, other_vertex2 = obstacle.connected_vertices[vertex]
-
-            # Only if the two other vertices are on either side of the vertex,
-            # otherwise the line_up would only touch the vertex
-            if other_vertex1.x < vertex.x < other_vertex2.x or other_vertex1.x > vertex.x > other_vertex2.x:
-                intersections += 1
-            #     print(f"vertex hit: {vertex}")
-            # else:
-            #     print(f"vertex grace: {vertex}")
-
-    line_up = Line(p, Point(p.x, obstacle.y_max))
-    for edge in obstacle.edges:
-        t, u = line_intersection_t_u(line_up, edge)
-        # Not '<=' to skip hitting vertices
-        if 0 < u < 1:
-            if abs(distance_point_to_line(p, edge)) < clearance:
-                # print(f"edge too close: {edge}, dist.: {distance_point_to_line(p, edge)}")
-                return True
-            elif 0 < t:
-                # print(f"edge hit: {edge}")
-                intersections += 1
-
-    # print(f"edges: {edges}")
-    # print(f"Intersections: {intersections}")
-    return intersections % 2 != 0
+    return lowest_t, lowest_t_move
 
 
-# Returns the possible paths around the first obstacle hit, or the same move if possible
-# Doesn't include the last step so another function can do a breath first search on the options
-def get_possible_paths(move: Move, field: Field) -> list[list[Move]]:
-    # closest
-    c_obstacle: Obstacle = None
-    c_t: float = float('inf')
-    # closest vertex or edge
-    c_v_or_e: Any = None
-
-    for obstacle in field.obstacles:
-        t, vertex_or_edge = first_intersection(move, obstacle)
-        if vertex_or_edge is not None and t < c_t:
-            c_v_or_e = vertex_or_edge
-            c_t = t
-            c_obstacle = obstacle
-
-    if not c_obstacle:
-        return [[move]]
-
+def path_around_obstacle(move: Move, obstacle: Obstacle, c_v_or_e: Point | Line, field: Field) -> list[list[Move]]:
     if isinstance(c_v_or_e, Point):
         point = c_v_or_e
     else:
         point = get_closest_point(move.start, [c_v_or_e.p1, c_v_or_e.p2])
 
-    o_point = c_obstacle.outside_points_dict[point]
+    o_point = obstacle.outside_points_dict[point]
 
     paths: list[list[Move]] = []
     # 0 is counterclockwise
@@ -144,8 +107,8 @@ def get_possible_paths(move: Move, field: Field) -> list[list[Move]]:
         move_to_dest = Move(Line(o_point, move.end), move.clearance, new_path[-1].end_time)
 
         new_o_point = o_point
-        while does_intersect(move_to_dest, c_obstacle):
-            new_o_point = c_obstacle.outside_to_outside_points[new_o_point][rotation]
+        while does_intersect(move_to_dest, obstacle):
+            new_o_point = obstacle.outside_to_outside_points[new_o_point][rotation]
             new_path.append(Move(
                 Line(move_to_dest.start, new_o_point),
                 move.clearance,
@@ -159,24 +122,55 @@ def get_possible_paths(move: Move, field: Field) -> list[list[Move]]:
 
         # If only one corner of the obstacle is passed and the inside angle is acute,
         # it could be passed closer than the 'outside point'
-        if new_o_point == o_point and c_obstacle.is_acute[point]:
-            closest_point = get_closest_to_acute_vertex(move.start, move.end, point, c_obstacle.clearance)
+        if new_o_point == o_point and obstacle.is_acute[point]:
+            closest_point = get_closest_to_acute_vertex(move.start, move.end, point, obstacle.clearance)
             new_path = [Move(Line(move.start, closest_point), move.clearance, move.start_time)]
         # todo for acute angle as first or last step
 
         # Don't append last step, so other function will know to make new move and check with other obstacles
         # new_path.append(move_to_dest)
+
         new_path = reduce_path(new_path, field)
-        # print(f"New path: {steps_str(new_path)}")
+
         if new_path:
             paths.append(new_path)
 
-        # # Don't check other rotation, as the first new step works
-        # if new_o_point == o_point:
-        #     print(f"First step works: {steps_str(new_path)}")
-        #     break
-
     return paths
+
+
+def path_around_robot(move: Move, r_move: Move, robot: Robot, field: Field) -> list[list[Move]]:
+    return []
+
+
+# Returns the possible paths around the first obstacle hit, or the same move if possible
+# Doesn't include the last step so another function can do a breath first search on the options
+def get_possible_paths(move: Move, field: Field) -> list[list[Move]]:
+    # Closest object
+    c_object: Obstacle | Robot | None = None
+    c_element: Point | Line | Move | None = None
+    c_t: float = float('inf')
+
+    for obstacle in field.obstacles:
+        t, vertex_or_edge = first_obstacle_intersection(move, obstacle)
+        if vertex_or_edge is not None and t < c_t:
+            c_element = vertex_or_edge
+            c_t = t
+            c_object = obstacle
+
+    for robot in field.robots:
+        t, r_move = first_robot_intersection(move, robot)
+        if r_move is not None and t < c_t:
+            c_element = r_move
+            c_t = t
+            c_object = robot
+
+    if not c_object:
+        return [[move]]
+
+    if isinstance(c_object, Obstacle):
+        return path_around_obstacle(move, c_object, c_element, field)
+    else:
+        return path_around_robot(move, c_element, c_object, field)
 
 
 def get_closest_to_acute_vertex(p1: Point, p2: Point, v: Point, clearance: float) -> Point:
@@ -229,6 +223,46 @@ def reduce_path(path: list[Move], field: Field) -> list[Move]:
         checking_index += 1
 
     return new_path
+
+
+# Check start and end of a move
+def is_point_in_obstacle(p: Point, obstacle: Obstacle, clearance: float) -> bool:
+    if not (obstacle.x_min - clearance <= p.x <= obstacle.x_max + clearance and
+            obstacle.y_min - clearance <= p.y <= obstacle.y_max + clearance):
+        return False
+
+    intersections = 0
+    for vertex in obstacle.vertices:
+        if distance_point_to_point(vertex, p) < clearance:
+            # print(f"vertex too close: {vertex}")
+            return True
+
+        if vertex.x == p.x and vertex.y > p.y:
+            other_vertex1, other_vertex2 = obstacle.connected_vertices[vertex]
+
+            # Only if the two other vertices are on either side of the vertex,
+            # otherwise the line_up would only touch the vertex
+            if other_vertex1.x < vertex.x < other_vertex2.x or other_vertex1.x > vertex.x > other_vertex2.x:
+                intersections += 1
+            #     print(f"vertex hit: {vertex}")
+            # else:
+            #     print(f"vertex grace: {vertex}")
+
+    line_up = Line(p, Point(p.x, obstacle.y_max))
+    for edge in obstacle.edges:
+        t, u = line_intersection_t_u(line_up, edge)
+        # Not '<=' to skip hitting vertices
+        if 0 < u < 1:
+            if abs(distance_point_to_line(p, edge)) < clearance:
+                # print(f"edge too close: {edge}, dist.: {distance_point_to_line(p, edge)}")
+                return True
+            elif 0 < t:
+                # print(f"edge hit: {edge}")
+                intersections += 1
+
+    # print(f"edges: {edges}")
+    # print(f"Intersections: {intersections}")
+    return intersections % 2 != 0
 
 
 def pathfind(move: Move, field: Field) -> list[Move]:
