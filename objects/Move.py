@@ -16,7 +16,10 @@ class Move:
         if line.len == 0:
             self.speed = 0.0
         if end_time == 0.0:
-            self.end_time = start_time + self.line.len/self.speed
+            if self.speed == 0.0:
+                self.end_time = start_time
+            else:
+                self.end_time = start_time + self.line.len/self.speed
         else:
             self.end_time = end_time
 
@@ -73,6 +76,28 @@ def list_str(moves: list[Move]) -> str:
     for move in moves:
         string += move.__str__() + ', '
     return string + ']'
+
+
+def path_in_paths(path: list[Move], paths: list[list[Move]]) -> bool:
+    for p in paths:
+        if len(p) != len(path):
+            continue
+        same = True
+        for i, move in enumerate(path):
+            if move.start != p[i].start or move.end != p[i].end:
+                same = False
+                break
+        if same:
+            return True
+    return False
+
+
+def remove_duplicates(paths: list[list[Move]]) -> list[list[Move]]:
+    unique = []
+    for path in paths:
+        if not path_in_paths(path, unique):
+            unique.append(path)
+    return unique
 
 
 def min_distance(m1: Move, m2: Move) -> tuple[float, float]:

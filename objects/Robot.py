@@ -1,5 +1,5 @@
 from Types import Point, Line
-from objects.Move import Move, get_wait_after_move
+from objects.Move import Move, get_wait_after_move, get_wait_move
 
 
 class Robot:
@@ -28,12 +28,25 @@ class Robot:
 
         return self.path[-1].end
 
-    def create_move(self, line: Line, start_time: float = None) -> Move:
+    def create_move(self, destination: Point, start_time: float = None) -> Move:
         if start_time is not None:
             if self.path:
                 if start_time > self.path[-1].end_time:
                     self.path.append(get_wait_after_move(self.path[-1], start_time))
-                start_time = max(start_time, self.path[-1].end_time)
+                start_time = self.path[-1].end_time
+                start = self.path[-1].end
+            else:
+                if start_time > 0.0:
+                    self.path.append(get_wait_move(Point(self.x, self.y), self.radius, 0.0, start_time))
+                else:
+                    start_time = 0.0
+                start = Point(self.x, self.y)
+        elif self.path:
+            start_time = self.path[-1].end_time
+            start = self.path[-1].end
+        else:
+            start_time = 0.0
+            start = Point(self.x, self.y)
 
-        move = Move(line, self.radius, start_time)
+        move = Move(Line(start, destination), self.radius, start_time)
         return move

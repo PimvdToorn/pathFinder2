@@ -5,7 +5,7 @@ from MathHelper import distance_point_to_line, line_intersection_t_u, line_inter
     leg_from_base_and_lines, point_to_line_t, line_intersection_t, offset_line
 from Types import Point, Line
 from objects.Field import Field
-from objects.Move import Move, steps_str, min_distance, get_wait_move
+from objects.Move import Move, steps_str, min_distance, get_wait_move, path_in_paths, remove_duplicates
 from objects.Obstacle import Obstacle
 from objects.Robot import Robot
 
@@ -61,14 +61,14 @@ def first_obstacle_intersection(move: Move, obstacle: Obstacle) -> tuple[float, 
         if t_min < t < lowest_t and abs(distance_point_to_line(vertex, move.line)) < move.clearance:
             lowest_t = t
             closest_vertex_or_edge = vertex
-            print(f"vertex too close: {vertex}, distance: {distance_point_to_line(vertex, move.line)}")
+            # print(f"vertex too close: {vertex}, distance: {distance_point_to_line(vertex, move.line)}")
 
     for edge in obstacle.edges:
         t, u = line_intersection_t_u(move.line, edge)
         if 0 < t < lowest_t and 0 < u < 1:
             lowest_t = t
             closest_vertex_or_edge = edge
-            print(f"Hit, t: {t}, u: {u}, edge: {edge}, at: {line_intersection(move.line, edge)}")
+            # print(f"Hit, t: {t}, u: {u}, edge: {edge}, at: {line_intersection(move.line, edge)}")
 
     return lowest_t, closest_vertex_or_edge
 
@@ -107,6 +107,7 @@ def path_around_obstacle(move: Move, obstacle: Obstacle, c_v_or_e: Point | Line,
         point = get_closest_point(move.start, [c_v_or_e.p1, c_v_or_e.p2])
 
     o_point = obstacle.outside_points_dict[point]
+    print(f"Around obstacle, move: {move}, point: {point}, o_point: {o_point}")
 
     paths: list[list[Move]] = []
     # 0 is counterclockwise
@@ -130,13 +131,13 @@ def path_around_obstacle(move: Move, obstacle: Obstacle, c_v_or_e: Point | Line,
 
         # Don't append last step, so other function will know to make new move and check with other obstacles
         # new_path.append(move_to_dest)
-
+        print(f"New p ar obstacle r{rotation}: {steps_str(new_path)}")
         new_path = reduce_path(new_path, field)
 
         if new_path:
             paths.append(new_path)
 
-    return paths
+    return remove_duplicates(paths)
 
 
 def path_around_robot(move: Move, r_move: Move, robot: Robot, field: Field) -> list[list[Move]]:
@@ -231,7 +232,20 @@ def reduce_path(path: list[Move], field: Field) -> list[Move]:
             for obstacle in field.obstacles:
                 if does_intersect(path[checking_index], obstacle):
                     print(f"Existing move intersects: {path[checking_index]}, path: {steps_str(path)}")
-                    return path[:checking_index]
+                    paths = get_possible_paths(path[checking_index], field)
+                    shortest_path = []
+                    shortest_time = float('inf')
+                    for p in paths:
+                        p.append(Move(
+                            Line(p[-1].end, path[checking_index].end),
+                            path[checking_index].clearance,
+                            p[-1].end_time)
+                        )
+                        if p[-1].end_time < shortest_time:
+                            shortest_time = p[-1].end_time
+                            shortest_path = p
+                    print(f"    Shortest path: {steps_str(shortest_path)}")
+                    return path[:checking_index] + shortest_path[:-1]
             new_path.insert(checking_index, path[checking_index])
 
         checking_index += 1
@@ -390,7 +404,9 @@ def pathfind(move: Move, field: Field) -> list[Move]:
             print("Destination in obstacle")
             return []
 
-    paths = get_possible_paths(move, field)
+    paths = remove_duplicates(get_possible_paths(move, field))
+    # for path in paths:
+    #     print(f"Path: {steps_str(path)}")
     destination_reached_loops = 0
     while True:
         print(f"Destination reached loops: {destination_reached_loops}")
@@ -433,8 +449,10 @@ def pathfind(move: Move, field: Field) -> list[Move]:
                 print(f"    {steps_str(new_path)}")
                 paths_next_loop.append(new_path)
 
+        paths_next_loop = remove_duplicates(paths_next_loop)
         for index, path in enumerate(paths_next_loop):
             print(f"{index}: {steps_str(path)}")
+        # input()
 
         if destination_reached:
             destination_reached_loops += 1

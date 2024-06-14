@@ -16,19 +16,19 @@ field.add_obstacles([
     Obstacle([P(5, 5), P(2, 5), P(1, 7), P(3, 9), P(10, 9), P(10, 8), P(3.5, 7.5), P(4, 6)], clearance)
 ])
 
-robot1 = Robot("R1", 0x01, clearance)
-robot2 = Robot("R2", 0x02, clearance)
+robot1 = Robot("R1", 0x01, clearance, 1, 1)
+robot2 = Robot("R2", 0x02, clearance, 9, 7)
 field.add_robots([robot1, robot2])
 
-line = L(4, 9.5, 8, 0)
-move = Move(line, clearance)
+d1 = P(6, 7)
+d2 = P(3, 4)
 
-# path = pathfind(move, field)
-# print(steps_str(path))
-# print(path)
-# robot1.path = path
+# robot1.path = pathfind(robot1.create_move(d1, 0), field)
+print("------------------------------------------------------------------")
+robot2.path = pathfind(robot2.create_move(d2), field)
 
-# move2 = robot2.create_move(L(P(-1.1, 0), P(1, 0)), 0)
-# path2 = pathfind(move2, field)
-# print(steps_str(path2))
-# print(path2)
+print(steps_str(robot1.path))
+print(robot1.path)
+
+print(steps_str(robot2.path))
+print(robot2.path)
