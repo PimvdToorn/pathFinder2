@@ -74,7 +74,7 @@ class Line:
         return hash((self.p1, self.p2))
 
     def __repr__(self):
-        return f"L({self.p1.__repr__()}, {self.p2.__repr__()})"
+        return f"L({self.p1.bare_str()}, {self.p2.bare_str()})"
 
     def __str__(self):
         return f"L({self.p1}, {self.p2})"

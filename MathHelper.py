@@ -60,25 +60,37 @@ def line_intersection(l1: Line, l2: Line) -> Point:
 
 
 # def hit_coords_point_to_line(p: Point, line: Line) -> Point:
-#     try:
-#         perpendicular_slope = -1 / get_slope(line)
-#     except ZeroDivisionError:
+#     if line.slope_inv == float('inf'):
 #         # Slope is 0, so same x as p and same y as line
 #         return Point(p.x, line.y1)
 #
-#     p_line = Line(p, Point(p.x + 1, p.y + perpendicular_slope))
+#     p_line = Line(p, Point(p.x + 1, p.y + line.slope_inv))
 #     t = line_intersection_t(p_line, line)
 #
-#     return Point(p.x + t, p.y + t * perpendicular_slope)
+#     return Point(p.x + t, p.y + t * line.slope_inv)
 
 
 def point_to_line_t(p: Point, line: Line) -> float:
     if line.slope_inv == float('inf'):
         # Slope is 0, so p.x as a part (percentage) from x1 to x2
-        return (line.x2 - p.x) / (line.x2 - line.x1)
+        return (p.x - line.x1) / (line.x2 - line.x1)
 
     p_line = Line(p, Point(p.x + 1, p.y + line.slope_inv))
     return line_intersection_t(line, p_line)
+
+
+def offset_line(line: Line, offset: float) -> Line:
+    dx = line.x2 - line.x1
+    dy = line.y2 - line.y1
+    d = sqrt(dx ** 2 + dy ** 2)
+    dx /= d
+    dy /= d
+    return Line(
+        line.x1 + offset * dy,
+        line.y1 - offset * dx,
+        line.x2 + offset * dy,
+        line.y2 - offset * dx
+    )
 
 
 def get_tangent_points(p: Point, c: Point, radius: float) -> tuple[Point, Point]:

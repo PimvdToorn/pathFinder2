@@ -2,7 +2,7 @@ from typing import Any
 
 from MathHelper import distance_point_to_line, line_intersection_t_u, line_intersection, distance_point_to_point, \
     get_tangent_points, distance_point_to_point2, get_closest_point, get_furthest_point, \
-    leg_from_base_and_lines, point_to_line_t, line_intersection_t
+    leg_from_base_and_lines, point_to_line_t, line_intersection_t, offset_line
 from Types import Point, Line
 from objects.Field import Field
 from objects.Move import Move, steps_str, min_distance, get_wait_move
@@ -61,12 +61,14 @@ def first_obstacle_intersection(move: Move, obstacle: Obstacle) -> tuple[float, 
         if t_min < t < lowest_t and abs(distance_point_to_line(vertex, move.line)) < move.clearance:
             lowest_t = t
             closest_vertex_or_edge = vertex
+            print(f"vertex too close: {vertex}, distance: {distance_point_to_line(vertex, move.line)}")
 
     for edge in obstacle.edges:
         t, u = line_intersection_t_u(move.line, edge)
         if 0 < t < lowest_t and 0 < u < 1:
             lowest_t = t
             closest_vertex_or_edge = edge
+            print(f"Hit, t: {t}, u: {u}, edge: {edge}, at: {line_intersection(move.line, edge)}")
 
     return lowest_t, closest_vertex_or_edge
 
@@ -126,13 +128,6 @@ def path_around_obstacle(move: Move, obstacle: Obstacle, c_v_or_e: Point | Line,
                 new_path[-1].end_time
             )
 
-        # If only one corner of the obstacle is passed and the inside angle is acute,
-        # it could be passed closer than the 'outside point'
-        if new_o_point == o_point and obstacle.is_acute[point]:
-            closest_point = get_closest_to_acute_vertex(move.start, move.end, point, obstacle.clearance)
-            new_path = [Move(Line(move.start, closest_point), move.clearance, move.start_time)]
-        # todo for acute angle as first or last step
-
         # Don't append last step, so other function will know to make new move and check with other obstacles
         # new_path.append(move_to_dest)
 
@@ -191,17 +186,6 @@ def get_possible_paths(move: Move, field: Field) -> list[list[Move]]:
         return path_around_robot(move, c_element, c_object, field)
 
 
-def get_closest_to_acute_vertex(p1: Point, p2: Point, v: Point, clearance: float) -> Point:
-    tps1 = get_tangent_points(p1, v, clearance)
-    tps2 = get_tangent_points(p2, v, clearance)
-
-    # Take the outermost tangent point
-    tp1 = get_furthest_point(p2, tps1)
-    tp2 = get_furthest_point(p1, tps2)
-
-    return line_intersection(Line(p1, tp1), Line(p2, tp2))
-
-
 # Checks if steps can be skipped and if they're possible
 def reduce_path(path: list[Move], field: Field) -> list[Move]:
     new_path = path
@@ -253,6 +237,108 @@ def reduce_path(path: list[Move], field: Field) -> list[Move]:
         checking_index += 1
 
     return new_path
+
+
+def get_closest_to_vertex(p1: Point, p2: Point, v: Point, op: Point, clearance: float) -> Point:
+    # clearance = clearance + 0.0001
+    tps1 = get_tangent_points(p1, v, clearance)
+    tps2 = get_tangent_points(p2, v, clearance)
+
+    # Take the outermost tangent point
+    tp1 = get_closest_point(op, tps1)
+    tp2 = get_closest_point(op, tps2)
+
+    return line_intersection(Line(p1, tp1), Line(p2, tp2))
+
+
+def get_point_to_vertex_tangent(p: Point, v: Point, op: Point, clearance: float) -> Line:
+    tps = get_tangent_points(p, v, clearance)
+    tp = get_closest_point(op, tps)
+    return Line(p, tp)
+
+
+def get_vertex_to_vertex_tangent(v1: Point, v2: Point, op: Point, clearance: float) -> Line:
+    line_v_to_v = Line(v1, v2)
+    # todo indirect and direct common tangents
+    return offset_line(line_v_to_v, clearance)
+
+
+def reduce_path_full(path: list[Move], field: Field) -> list[Move]:
+    path = reduce_path(path, field)
+    mixed_path: list[Move | Line] = path
+
+    # todo multiple vertex outside points in a row -> tangent lines between the two circles
+    # List of those tangent lines, the tangent lines from other points and the waiting moves
+    # Connect tangent lines into moves
+    for index, move in enumerate(mixed_path):
+        if move.waiting:
+            continue
+        for obstacle in field.obstacles:
+            for v, op in obstacle.outside_points_dict.items():
+                if op == move.end:
+                    mixed_path[index] = get_point_to_vertex_tangent(move.start, v, op, move.clearance)
+
+    for index, move in enumerate(new_path[-2::-1]):
+        index = len(new_path) - index - 2
+        if move.waiting:
+            continue
+        for obstacle in field.obstacles:
+            for v, op in obstacle.outside_points_dict.items():
+                if op == move.end:
+                    if obstacle.is_acute[v] or \
+                            move.start not in obstacle.outside_points_dict.values() or \
+                            new_path[index + 1].end not in obstacle.outside_points_dict.values():
+                        closest_point = get_closest_to_vertex(move.start, new_path[index + 1].end, v, op,
+                                                              obstacle.clearance)
+                        new_path[index] = Move(
+                            Line(move.start, closest_point),
+                            move.clearance,
+                            move.start_time
+                        )
+                        # print(f"New path: {new_path}")
+                        # print(f"index: {index}, move: {move}")
+                        # print(f"New move: {new_path[index]}")
+                        new_path[index + 1] = Move(
+                            Line(closest_point, new_path[index + 1].end),
+                            move.clearance,
+                            new_path[index].end_time
+                        )
+                        new_path = new_path[:index] + update_times(new_path[index:])
+
+    updated = True
+    while updated:
+        updated = False
+        for index, move in enumerate(new_path):
+            paths = get_possible_paths(move, field)
+            if paths != [[move]]:
+                updated = True
+                if paths[0][-1].waiting:
+                    new_path.insert(index, paths[0][-1])
+                    new_path = new_path[:index] + update_times(new_path[index:])
+                else:
+                    print(f"Collision in reduction, move: {move}, path: {steps_str(new_path)}")
+                    for p in paths:
+                        print(f"    {steps_str(p)}")
+                    print("-------------------------------------------")
+                    return new_path[:index]
+    return new_path
+
+
+def update_times(path: list[Move]) -> list[Move]:
+    for i, rest in enumerate(path[1:]):
+        if rest.waiting:
+            path[i + 1] = Move(
+                rest.line,
+                rest.clearance,
+                path[i].end_time,
+                rest.end_time
+            )
+        path[i + 1] = Move(
+            rest.line,
+            rest.clearance,
+            path[i].end_time
+        )
+    return path
 
 
 # Check start and end of a move
@@ -314,7 +400,7 @@ def pathfind(move: Move, field: Field) -> list[Move]:
 
         paths_next_loop: list[list[Move]] = []
         destination_reached = False
-        for path in paths:
+        for index, path in enumerate(paths):
             # print("----------------------------------------------------------")
             # print(f"Path: {path}")
             if path[-1].end == destination:
@@ -330,22 +416,32 @@ def pathfind(move: Move, field: Field) -> list[Move]:
             )
 
             new_paths = get_possible_paths(new_move_to_dest, field)
-            # print(f"New paths: {new_paths}")
+            print(f"{index} new move: {new_move_to_dest}")
+            print(f"New paths: {new_paths}")
             if new_paths == [[new_move_to_dest]]:
+                # new_path = reduce_path_full(path + new_paths[0], field)
+                new_path = reduce_path(path + new_paths[0], field)
                 destination_reached = True
+                print(f"    {steps_str(new_path)}")
+                paths_next_loop.append(new_path)
                 # input("Destination reached other")
+                continue
+
             for new_path in new_paths:
                 new_path = reduce_path(path + new_path, field)
                 # print(f"new_path: {new_path}")
-                # print(f"    {steps_str(new_path)}")
+                print(f"    {steps_str(new_path)}")
                 paths_next_loop.append(new_path)
+
+        for index, path in enumerate(paths_next_loop):
+            print(f"{index}: {steps_str(path)}")
 
         if destination_reached:
             destination_reached_loops += 1
             shortest_theoretical_path = float('inf')
             shortest_path = []
             for path in paths_next_loop:
-                # print(f"Path: {path}")
+                # print(f"Path: {steps_str(path)}")
                 if path[-1].end == destination:
                     # print(f"Destination reached in {path[-1].end_time}: {steps_str(path)}")
                     if path[-1].end_time < shortest_theoretical_path:
