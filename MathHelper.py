@@ -1,30 +1,30 @@
-from math import sqrt
+from math import sqrt, atan2, pi
 from typing import Iterable
 
 from Types import Point, Line
 
 
-def distance_point_to_point(p1: Point, p2: Point) -> float:
+def distance(p1: Point, p2: Point) -> float:
     return sqrt((p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2)
 
 
-def distance_point_to_point2(p1: Point, p2: Point) -> float:
+def distance2(p1: Point, p2: Point) -> float:
     return (p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2
 
 
 def get_closest_point(p: Point, points: Iterable[Point]) -> Point:
-    return min(points, key=lambda x: distance_point_to_point2(p, x))
+    return min(points, key=lambda x: distance2(p, x))
 
 
 def get_furthest_point(p: Point, points: Iterable[Point]) -> Point:
-    return max(points, key=lambda x: distance_point_to_point2(p, x))
+    return max(points, key=lambda x: distance2(p, x))
 
 
 def distance_point_to_line(point: Point, line: Line) -> float:
     # https://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line#:~:text=horizontal%20line%20segment.-,Line%20defined%20by%20two%20points,-%5Bedit%5D
     # Positive is left of the line, negative to the right
     a2 = (line.x2 - line.x1) * (point.y - line.y1) - (point.x - line.x1) * (line.y2 - line.y1)
-    b = distance_point_to_point(line.p1, line.p2)
+    b = distance(line.p1, line.p2)
     return a2 / b
 
 
@@ -133,3 +133,12 @@ def leg_from_base_and_cos_angle(base: float, cos_angle: float) -> float:
 # It's -cos_angle because at the outer angle the second robot is still moving towards the first
 def leg_from_base_and_lines(base: float, l1: Line, l2: Line) -> float:
     return leg_from_base_and_cos_angle(base, -cos_angle_between_lines(l1, l2))
+
+
+def get_angle_to_y_axis(line: Line) -> float:
+    return atan2(line.x2 - line.x1, line.y2 - line.y1) / pi * 180
+
+
+def get_heading(line: Line) -> float:
+    angle = get_angle_to_y_axis(line)
+    return angle if angle >= 0 else 360 + angle

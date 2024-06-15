@@ -1,4 +1,4 @@
-from MathHelper import distance_point_to_point, line_intersection, distance_point_to_line, point_to_line_t, offset_line
+from MathHelper import line_intersection, point_to_line_t, offset_line
 from Types import Point, Line, P
 
 
@@ -48,9 +48,9 @@ class Obstacle:
 
             self.outside_points_dict[vertex] = line_intersection(ol1, ol2)
 
-        for op in self.outside_points_dict.values():
-            print(f"{op.bare_str()},", end="")
-        print()
+        # for op in self.outside_points_dict.values():
+        #     print(f"{op.bare_str()},", end="")
+        # print()
 
         self.outside_to_outside_points = {
             self.outside_points_dict[v]: [

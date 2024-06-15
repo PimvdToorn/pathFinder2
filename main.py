@@ -1,7 +1,10 @@
-from MathHelper import offset_line
-from PathFinder import pathfind, get_best_paths
+from math import pi
+
+from Controller import update_speed_and_heading
+from MathHelper import offset_line, get_heading
+from PathFinder import pathfind, set_path
 from Types import L, P
-from objects.Move import Move, steps_str, list_str
+from objects.Move import Move, steps_str, path_str
 from objects.Field import Field
 from objects.Obstacle import Obstacle
 from objects.Robot import Robot
@@ -17,12 +20,17 @@ field.add_obstacles([
 ])
 
 
-start_positions = [P(0, 1), P(1, 1), P(9, 7), P(12, 4), P(5, 9.5), P(5, 2)]
-destinations = [P(6, 7), P(3, 4), P(6, 2), P(2, 9), P(4.5, 7), P(7, 3)]
-
+# start_positions = [P(0, 1), P(1, 1), P(9, 7), P(12, 4), P(5, 9.5), P(5, 2)]
+# destinations = [P(6, 7), P(3, 4), P(6, 2), P(2, 9), P(4.5, 7), P(7, 3)]
+start_positions = [P(0, 1)]
+destinations = [P(0, -1)]
 
 for i, sp in enumerate(start_positions):
-    field.add_robot(Robot(f"R{i+1}", i, clearance, sp.x, sp.y))
+    field.add_robot(Robot(f"R{i+1}", i, clearance, sp))
 
-get_best_paths(destinations, field)
+# get_best_paths(destinations, field)
+set_path(destinations[0], field.robots[0], field, 0)
+print(f"Robot 1 path: {path_str(field.robots[0].path)}")
+update_speed_and_heading(field.robots[0], 10_000_000, P(0.01, 0), 0, field)
+
 

@@ -1,9 +1,11 @@
-from MathHelper import line_intersection_t_u, distance_point_to_point, point_to_line_t
+from math import ceil
+
+from MathHelper import line_intersection_t_u, distance, point_to_line_t
 from Types import Line, Point
 
 
 class Move:
-    def __init__(self, line: Line, clearance: float, start_time: float = 0.0, end_time: float = 0.0):  # , speed: float = 0.001):
+    def __init__(self, line: Line, clearance: float, start_time: int = 0, end_time: int = 0):  # , speed: float = 0.001):
         self.waiting = line.len == 0
         self.x1 = line.x1
         self.y1 = line.y1
@@ -12,14 +14,14 @@ class Move:
         self.line = line
         self.start_time = start_time
         # self.speed = speed
-        self.speed = 0.001
+        self.speed = 0.0000001
         if line.len == 0:
             self.speed = 0.0
-        if end_time == 0.0:
+        if end_time == 0:
             if self.speed == 0.0:
                 self.end_time = start_time
             else:
-                self.end_time = start_time + self.line.len/self.speed
+                self.end_time = start_time + ceil(self.line.len/self.speed)
         else:
             self.end_time = end_time
 
@@ -33,7 +35,7 @@ class Move:
         return f"Move({self.start_time}, {self.end_time}, {self.start}, {self.end})"
 
     def __str__(self) -> str:
-        return f"Move({self.start_time:.1f}, {self.end_time:.1f}, {self.start}, {self.end})"
+        return f"Move({self.start_time/1000000:.1f}-{self.end_time/1000000:.1f}s, {self.start}, {self.end})"
 
     @property
     def start(self):
@@ -53,11 +55,11 @@ class Move:
         return self.start + (self.end - self.start) * path_completion_level
 
 
-def get_wait_move(at: Point, clearance: float, start_time: float, wait_time: float) -> Move:
+def get_wait_move(at: Point, clearance: float, start_time: int, wait_time: int) -> Move:
     return Move(Line(at, at), clearance, start_time, start_time + wait_time)
 
 
-def get_wait_after_move(move: Move, until_time: float) -> Move:
+def get_wait_after_move(move: Move, until_time: int) -> Move:
     return Move(Line(move.end, move.end), move.clearance, move.end_time, until_time)
 
 
@@ -71,7 +73,7 @@ def steps_str(moves: list[Move]) -> str:
     return string
 
 
-def list_str(moves: list[Move]) -> str:
+def path_str(moves: list[Move]) -> str:
     string = '['
     for move in moves:
         string += move.__str__() + ', '
@@ -103,12 +105,12 @@ def remove_duplicates(paths: list[list[Move]]) -> list[list[Move]]:
 def min_distance(m1: Move, m2: Move) -> tuple[float, float]:
     if m1.waiting or m2.waiting:
         if m1.waiting and m2.waiting:
-            return distance_point_to_point(m1.start, m2.start), m1.start_time
+            return distance(m1.start, m2.start), m1.start_time
         waiting = m1 if m1.waiting else m2
         moving = m1 if not m1.waiting else m2
         t = point_to_line_t(waiting.start, moving.line)
         t = max(0.0, min(1.0, t))
-        return (distance_point_to_point(waiting.start, moving.line.location_at_t(t)),
+        return (distance(waiting.start, moving.line.location_at_t(t)),
                 moving.start_time + t * moving.line.len / moving.speed)
 
     t, u = line_intersection_t_u(m1.line, m2.line)
@@ -117,9 +119,9 @@ def min_distance(m1: Move, m2: Move) -> tuple[float, float]:
     t_avg = (time1 * m1.speed + time2 * m2.speed) / (m1.speed + m2.speed)
 
     # If the closest point is before or after the move, check the distance at the start or end
-    t_avg = max(m1.start_time, m2.start_time, t_avg)
-    t_avg = min(m1.end_time, m2.end_time, t_avg)
+    t_avg = max(float(m1.start_time), float(m2.start_time), t_avg)
+    t_avg = min(float(m1.end_time), float(m2.end_time), t_avg)
 
     p1 = m1.location_at_time(t_avg)
     p2 = m2.location_at_time(t_avg)
-    return distance_point_to_point(p1, p2), t_avg
+    return distance(p1, p2), t_avg

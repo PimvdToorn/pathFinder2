@@ -2,8 +2,8 @@ from itertools import permutations
 from typing import Any
 from timeit import default_timer as timer
 
-from MathHelper import distance_point_to_line, line_intersection_t_u, line_intersection, distance_point_to_point, \
-    get_tangent_points, distance_point_to_point2, get_closest_point, get_furthest_point, \
+from MathHelper import distance_point_to_line, line_intersection_t_u, line_intersection, distance, \
+    get_tangent_points, distance2, get_closest_point, get_furthest_point, \
     leg_from_base_and_lines, point_to_line_t, line_intersection_t, offset_line
 from Types import Point, Line
 from objects.Field import Field
@@ -51,7 +51,7 @@ def first_obstacle_intersection(move: Move, obstacle: Obstacle) -> tuple[float, 
     if move.waiting:
         return float('inf'), None
 
-    t_offset = move.clearance / distance_point_to_point(move.start, move.end)
+    t_offset = move.clearance / distance(move.start, move.end)
     t_min = 0 - t_offset
     lowest_t = 1 + t_offset
     closest_vertex_or_edge = None
@@ -370,7 +370,7 @@ def is_point_in_obstacle(p: Point, obstacle: Obstacle, clearance: float) -> bool
 
     intersections = 0
     for vertex in obstacle.vertices:
-        if distance_point_to_point(vertex, p) < clearance:
+        if distance(vertex, p) < clearance:
             # print(f"vertex too close: {vertex}")
             return True
 
@@ -489,7 +489,13 @@ def pathfind(move: Move, field: Field) -> list[Move]:
         paths = paths_next_loop
 
 
-def get_best_paths(destinations: list[Point], field: Field) -> None:
+def set_path(destination: Point, robot: Robot, field: Field, time: int) -> None:
+    robot.path = []
+    move = robot.create_move(destination, time)
+    robot.path = pathfind(move, field)
+
+
+def set_best_paths(destinations: list[Point], field: Field) -> None:
     all_dest_orders = list(permutations(destinations))
     all_robot_orders = list({p[:len(destinations)] for p in permutations(range(len(field.robots)))})
     print(all_dest_orders)
