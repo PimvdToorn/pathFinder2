@@ -3,11 +3,10 @@ from typing import Any
 from timeit import default_timer as timer
 
 from MathHelper import distance_point_to_line, line_intersection_t_u, line_intersection, distance, \
-    get_tangent_points, distance2, get_closest_point, get_furthest_point, \
-    leg_from_base_and_lines, point_to_line_t, line_intersection_t, offset_line
+    get_tangent_points, get_closest_point, leg_from_base_and_lines, point_to_line_t, line_intersection_t, offset_line
 from Types import Point, Line
 from objects.Field import Field
-from objects.Move import Move, steps_str, min_distance, get_wait_move, path_in_paths, remove_duplicates
+from objects.Move import Move, steps_str, min_distance, get_wait_move, remove_duplicates
 from objects.Obstacle import Obstacle
 from objects.Robot import Robot
 
@@ -110,7 +109,7 @@ def path_around_obstacle(move: Move, obstacle: Obstacle, c_v_or_e: Point | Line,
     else:
         point = get_closest_point(move.start, [c_v_or_e.p1, c_v_or_e.p2])
 
-    o_point = obstacle.outside_points_dict[point]
+    o_point = obstacle[move.clearance].outside_points_dict[point]
     # print(f"Around obstacle, move: {move}, point: {point}, o_point: {o_point}")
 
     paths: list[list[Move]] = []
@@ -121,7 +120,7 @@ def path_around_obstacle(move: Move, obstacle: Obstacle, c_v_or_e: Point | Line,
 
         new_o_point = o_point
         while does_intersect(move_to_dest, obstacle):
-            new_o_point = obstacle.outside_to_outside_points[new_o_point][rotation]
+            new_o_point = obstacle[move.clearance].outside_to_outside_points[new_o_point][rotation]
             new_path.append(Move(
                 Line(move_to_dest.start, new_o_point),
                 move.clearance,
@@ -240,20 +239,6 @@ def reduce_path(path: list[Move], field: Field) -> list[list[Move]]:
                 if does_intersect(path[checking_index], obstacle):
                     # print(f"Existing move intersects: {path[checking_index]}, path: {steps_str(path)}")
                     return get_possible_paths(path[checking_index], field)
-                    # paths = get_possible_paths(path[checking_index], field)
-                    # shortest_path = []
-                    # shortest_time = float('inf')
-                    # for p in paths:
-                    #     p.append(Move(
-                    #         Line(p[-1].end, path[checking_index].end),
-                    #         path[checking_index].clearance,
-                    #         p[-1].end_time)
-                    #     )
-                    #     if p[-1].end_time < shortest_time:
-                    #         shortest_time = p[-1].end_time
-                    #         shortest_path = p
-                    # print(f"    Shortest path: {steps_str(shortest_path)}")
-                    # return path[:checking_index] + shortest_path[:-1]
             new_path.insert(checking_index, path[checking_index])
 
         checking_index += 1
@@ -295,7 +280,7 @@ def reduce_corners(path: list[Move], field: Field) -> list[Move]:
         if move.waiting:
             continue
         for obstacle in field.obstacles:
-            for v, op in obstacle.outside_points_dict.items():
+            for v, op in obstacle[move.clearance].outside_points_dict.items():
                 if op == move.end:
                     mixed_path[index] = get_point_to_vertex_tangent(move.start, v, op, move.clearance)
 
@@ -304,13 +289,13 @@ def reduce_corners(path: list[Move], field: Field) -> list[Move]:
         if move.waiting:
             continue
         for obstacle in field.obstacles:
-            for v, op in obstacle.outside_points_dict.items():
+            for v, op in obstacle[move.clearance].outside_points_dict.items():
                 if op == move.end:
                     if obstacle.is_acute[v] or \
-                            move.start not in obstacle.outside_points_dict.values() or \
-                            new_path[index + 1].end not in obstacle.outside_points_dict.values():
+                            move.start not in obstacle[move.clearance].outside_points_dict.values() or \
+                            new_path[index + 1].end not in obstacle[move.clearance].outside_points_dict.values():
                         closest_point = get_closest_to_vertex(move.start, new_path[index + 1].end, v, op,
-                                                              obstacle.clearance)
+                                                              move.clearance)
                         new_path[index] = Move(
                             Line(move.start, closest_point),
                             move.clearance,
@@ -498,11 +483,11 @@ def set_path(destination: Point, robot: Robot, field: Field, time: int) -> None:
 def set_best_paths(destinations: list[Point], field: Field) -> None:
     all_dest_orders = list(permutations(destinations))
     all_robot_orders = list({p[:len(destinations)] for p in permutations(range(len(field.robots)))})
-    print(all_dest_orders)
-    print(all_robot_orders)
+    # print(all_dest_orders)
+    # print(all_robot_orders)
     # input()
     total = len(all_dest_orders) * len(all_robot_orders)
-    print()
+    # print()
 
     best_max_end_time = float('inf')
     best_paths: list[list[Move]] = []
@@ -540,5 +525,6 @@ def set_best_paths(destinations: list[Point], field: Field) -> None:
     for i, d in enumerate(destinations):
         robot = field.robots[i]
         robot.path = best_paths[i]
+        robot.destination = d
         print(f"Robot {i + 1}: {steps_str(robot.path)}")
         print(robot.path)

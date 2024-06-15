@@ -2,14 +2,47 @@ from MathHelper import line_intersection, point_to_line_t, offset_line
 from Types import Point, Line, P
 
 
+class ClearancePoints:
+    def __init__(self, clearance: float, connected_vertices: dict[Point, list[Point]], edges: list[Line]):
+        self.clearance = clearance + 0.0001
+
+        outside_lines_dict = {e: Line(0, 0, 0, 0) for e in edges}
+        for edge in outside_lines_dict:
+            outside_lines_dict[edge] = offset_line(edge, self.clearance)
+
+        self.outside_points_dict = {v: Point(0, 0) for v in connected_vertices.keys()}
+        for vertex in connected_vertices.keys():
+            v1, v2 = connected_vertices[vertex]
+            l1 = Line(vertex, v1)
+            l2 = Line(v2, vertex)
+            ol1 = outside_lines_dict[l1]
+            ol2 = outside_lines_dict[l2]
+
+            if l1.slope == l2.slope:
+                ol2 = Line(vertex, P(vertex.x + 1, vertex.y + l1.slope_inv))
+
+            self.outside_points_dict[vertex] = line_intersection(ol1, ol2)
+
+        # for op in self.outside_points_dict.values():
+        #     print(f"{op.bare_str()},", end="")
+        # print()
+
+        self.outside_to_outside_points = {
+            self.outside_points_dict[v]: [
+                self.outside_points_dict[connected_vertices[v][0]],
+                self.outside_points_dict[connected_vertices[v][1]]
+            ]
+            for v in connected_vertices.keys()
+        }
+
+
 class Obstacle:
     # Give the vertices in a clockwise fashion
-    def __init__(self, vertices: list[Point], clearance: float):
+    def __init__(self, vertices: list[Point]):
         if len(vertices) < 3:
             raise Exception("Obstacle must have at least 3 vertices")
 
-        # For floating point errors
-        self.clearance = clearance + 0.0001
+        self.clearance_points: dict[float, ClearancePoints] = {}
 
         self.vertices = vertices
         all_x = [p.x for p in vertices]
@@ -31,35 +64,6 @@ class Obstacle:
         # b is counterclockwise, c clockwise
         self.connected_vertices[vertices[-1]].reverse()
 
-        outside_lines_dict = {e: Line(0, 0, 0, 0) for e in self.edges}
-        for edge in outside_lines_dict:
-            outside_lines_dict[edge] = offset_line(edge, self.clearance)
-
-        self.outside_points_dict = {v: Point(0, 0) for v in vertices}
-        for vertex in self.vertices:
-            v1, v2 = self.connected_vertices[vertex]
-            l1 = Line(vertex, v1)
-            l2 = Line(v2, vertex)
-            ol1 = outside_lines_dict[l1]
-            ol2 = outside_lines_dict[l2]
-
-            if l1.slope == l2.slope:
-                ol2 = Line(vertex, P(vertex.x + 1, vertex.y + l1.slope_inv))
-
-            self.outside_points_dict[vertex] = line_intersection(ol1, ol2)
-
-        # for op in self.outside_points_dict.values():
-        #     print(f"{op.bare_str()},", end="")
-        # print()
-
-        self.outside_to_outside_points = {
-            self.outside_points_dict[v]: [
-                self.outside_points_dict[self.connected_vertices[v][0]],
-                self.outside_points_dict[self.connected_vertices[v][1]]
-            ]
-            for v in vertices
-        }
-
         self.is_acute = {
             v: point_to_line_t(
                 self.connected_vertices[v][0],
@@ -77,3 +81,12 @@ class Obstacle:
         #     )}")
         #     print(f"Connected vertices: {self.connected_vertices[v]}")
         #     print(f"{v}: {a}")
+
+    def __getitem__(self, item: float) -> ClearancePoints:
+        if item not in self.clearance_points:
+            print(f"Creating clearance points for {item}")
+            self.clearance_points[item] = ClearancePoints(item, self.connected_vertices, self.edges)
+
+        return self.clearance_points[item]
+
+

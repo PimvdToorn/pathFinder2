@@ -4,15 +4,14 @@ from objects.Move import Move
 
 
 class Robot:
-    heading = 0.0
-    path: list[Move] = []
-
     def __init__(self, name: str, address: int, radius: float, location: Point = P(0, 0)) -> None:
         self.name = name
         self.address = address
         self.radius = radius
         self.location = location
         self.destination = location
+        self.heading = 0.0
+        self.path: list[Move] = []
 
     def get_move(self, time: int) -> Move | None:
         if not self.path or self.path[0].start_time > time or self.path[-1].end_time < time:
@@ -48,7 +47,7 @@ class Robot:
 
         return get_heading(self.path[-1].line)
 
-    def create_move(self, destination: Point, start_time: int = None) -> Move:
+    def create_move(self, destination: Point, start_time: int = 0) -> Move:
         start_time = max(start_time, 0)
         self.destination = destination
 

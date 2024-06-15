@@ -37,10 +37,6 @@ class Point:
 
 
 class Line:
-    _len = None
-    _slope = None
-    _slope_inv = None
-
     def __init__(self, *args):
         if isinstance(args[0], Point):
             self.x1 = args[0].x
@@ -65,6 +61,10 @@ class Line:
         self.y_min = min(self.y1, self.y2)
         self.x_max = max(self.x1, self.x2)
         self.y_max = max(self.y1, self.y2)
+
+        self._len = None
+        self._slope = None
+        self._slope_inv = None
 
     def __eq__(self, other):
         if isinstance(other, Line):
