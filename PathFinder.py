@@ -1,4 +1,6 @@
+from itertools import permutations
 from typing import Any
+from timeit import default_timer as timer
 
 from MathHelper import distance_point_to_line, line_intersection_t_u, line_intersection, distance_point_to_point, \
     get_tangent_points, distance_point_to_point2, get_closest_point, get_furthest_point, \
@@ -45,6 +47,8 @@ def first_obstacle_intersection(move: Move, obstacle: Obstacle) -> tuple[float, 
             move.x_max < obstacle.x_min or \
             move.y_min > obstacle.y_max or \
             move.y_max < obstacle.y_min:
+        return float('inf'), None
+    if move.waiting:
         return float('inf'), None
 
     t_offset = move.clearance / distance_point_to_point(move.start, move.end)
@@ -107,7 +111,7 @@ def path_around_obstacle(move: Move, obstacle: Obstacle, c_v_or_e: Point | Line,
         point = get_closest_point(move.start, [c_v_or_e.p1, c_v_or_e.p2])
 
     o_point = obstacle.outside_points_dict[point]
-    print(f"Around obstacle, move: {move}, point: {point}, o_point: {o_point}")
+    # print(f"Around obstacle, move: {move}, point: {point}, o_point: {o_point}")
 
     paths: list[list[Move]] = []
     # 0 is counterclockwise
@@ -131,11 +135,12 @@ def path_around_obstacle(move: Move, obstacle: Obstacle, c_v_or_e: Point | Line,
 
         # Don't append last step, so other function will know to make new move and check with other obstacles
         # new_path.append(move_to_dest)
-        print(f"New p ar obstacle r{rotation}: {steps_str(new_path)}")
-        new_path = reduce_path(new_path, field)
-
-        if new_path:
-            paths.append(new_path)
+        # print(f"New p ar obstacle r{rotation}: {steps_str(new_path)}")
+        paths += reduce_path(new_path, field)
+        # new_path = reduce_path(new_path, field)
+        #
+        # if new_path:
+        #     paths.append(new_path)
 
     return remove_duplicates(paths)
 
@@ -180,6 +185,8 @@ def get_possible_paths(move: Move, field: Field) -> list[list[Move]]:
 
     if not c_object:
         return [[move]]
+    if move.waiting:
+        return []
 
     if isinstance(c_object, Obstacle):
         return path_around_obstacle(move, c_object, c_element, field)
@@ -188,7 +195,7 @@ def get_possible_paths(move: Move, field: Field) -> list[list[Move]]:
 
 
 # Checks if steps can be skipped and if they're possible
-def reduce_path(path: list[Move], field: Field) -> list[Move]:
+def reduce_path(path: list[Move], field: Field) -> list[list[Move]]:
     new_path = path
     checking_index = 0
     while checking_index < len(new_path):
@@ -231,26 +238,27 @@ def reduce_path(path: list[Move], field: Field) -> list[Move]:
         if intersects:
             for obstacle in field.obstacles:
                 if does_intersect(path[checking_index], obstacle):
-                    print(f"Existing move intersects: {path[checking_index]}, path: {steps_str(path)}")
-                    paths = get_possible_paths(path[checking_index], field)
-                    shortest_path = []
-                    shortest_time = float('inf')
-                    for p in paths:
-                        p.append(Move(
-                            Line(p[-1].end, path[checking_index].end),
-                            path[checking_index].clearance,
-                            p[-1].end_time)
-                        )
-                        if p[-1].end_time < shortest_time:
-                            shortest_time = p[-1].end_time
-                            shortest_path = p
-                    print(f"    Shortest path: {steps_str(shortest_path)}")
-                    return path[:checking_index] + shortest_path[:-1]
+                    # print(f"Existing move intersects: {path[checking_index]}, path: {steps_str(path)}")
+                    return get_possible_paths(path[checking_index], field)
+                    # paths = get_possible_paths(path[checking_index], field)
+                    # shortest_path = []
+                    # shortest_time = float('inf')
+                    # for p in paths:
+                    #     p.append(Move(
+                    #         Line(p[-1].end, path[checking_index].end),
+                    #         path[checking_index].clearance,
+                    #         p[-1].end_time)
+                    #     )
+                    #     if p[-1].end_time < shortest_time:
+                    #         shortest_time = p[-1].end_time
+                    #         shortest_path = p
+                    # print(f"    Shortest path: {steps_str(shortest_path)}")
+                    # return path[:checking_index] + shortest_path[:-1]
             new_path.insert(checking_index, path[checking_index])
 
         checking_index += 1
 
-    return new_path
+    return [new_path]
 
 
 def get_closest_to_vertex(p1: Point, p2: Point, v: Point, op: Point, clearance: float) -> Point:
@@ -277,8 +285,7 @@ def get_vertex_to_vertex_tangent(v1: Point, v2: Point, op: Point, clearance: flo
     return offset_line(line_v_to_v, clearance)
 
 
-def reduce_path_full(path: list[Move], field: Field) -> list[Move]:
-    path = reduce_path(path, field)
+def reduce_corners(path: list[Move], field: Field) -> list[Move]:
     mixed_path: list[Move | Line] = path
 
     # todo multiple vertex outside points in a row -> tangent lines between the two circles
@@ -409,7 +416,7 @@ def pathfind(move: Move, field: Field) -> list[Move]:
     #     print(f"Path: {steps_str(path)}")
     destination_reached_loops = 0
     while True:
-        print(f"Destination reached loops: {destination_reached_loops}")
+        # print(f"Destination reached loops: {destination_reached_loops}")
         if not paths:
             print("No possible paths")
             return []
@@ -432,26 +439,27 @@ def pathfind(move: Move, field: Field) -> list[Move]:
             )
 
             new_paths = get_possible_paths(new_move_to_dest, field)
-            print(f"{index} new move: {new_move_to_dest}")
-            print(f"New paths: {new_paths}")
+            # print(f"{index} new move: {new_move_to_dest}")
+            # print(f"New paths: {new_paths}")
             if new_paths == [[new_move_to_dest]]:
-                # new_path = reduce_path_full(path + new_paths[0], field)
-                new_path = reduce_path(path + new_paths[0], field)
-                destination_reached = True
-                print(f"    {steps_str(new_path)}")
-                paths_next_loop.append(new_path)
-                # input("Destination reached other")
+                reduced_paths = reduce_path(path + new_paths[0], field)
+                for rp in reduced_paths:
+                    if rp[-1].end == destination:
+                        destination_reached = True
+                    # print(f"    {steps_str(rp)}")
+                    paths_next_loop.append(rp)
+                    # input("Destination reached other")
                 continue
 
             for new_path in new_paths:
-                new_path = reduce_path(path + new_path, field)
-                # print(f"new_path: {new_path}")
-                print(f"    {steps_str(new_path)}")
-                paths_next_loop.append(new_path)
+                reduced_paths = reduce_path(path + new_path, field)
+                for rp in reduced_paths:
+                    # print(f"    {steps_str(rp)}")
+                    paths_next_loop.append(rp)
 
-        paths_next_loop = remove_duplicates(paths_next_loop)
-        for index, path in enumerate(paths_next_loop):
-            print(f"{index}: {steps_str(path)}")
+        # paths_next_loop = remove_duplicates(paths_next_loop)
+        # for index, path in enumerate(paths_next_loop):
+        #     print(f"{index}: {steps_str(path)}")
         # input()
 
         if destination_reached:
@@ -479,3 +487,52 @@ def pathfind(move: Move, field: Field) -> list[Move]:
                 return shortest_path
 
         paths = paths_next_loop
+
+
+def get_best_paths(destinations: list[Point], field: Field) -> None:
+    all_dest_orders = list(permutations(destinations))
+    all_robot_orders = list({p[:len(destinations)] for p in permutations(range(len(field.robots)))})
+    print(all_dest_orders)
+    print(all_robot_orders)
+    # input()
+    total = len(all_dest_orders) * len(all_robot_orders)
+    print()
+
+    best_max_end_time = float('inf')
+    best_paths: list[list[Move]] = []
+    for index, dest_order in enumerate(all_dest_orders):
+        print(f"Progress: {index * len(all_robot_orders)}/{total}")
+        start = timer()
+        for rindex, robot_order in enumerate(all_robot_orders):
+            for robot in field.robots:
+                robot.path = []
+            # print("-----------------------------------------------------------------------------------------")
+            # print(f"Destination order: {dest_order}")
+            # print(f"Robot order: {robot_order}")
+
+            # todo remove known impossible orders
+            # todo add chosen destination to robot
+            max_end_time = 0.0
+            for i, d in enumerate(dest_order):
+                robot = field.robots[robot_order[i]]
+                robot.path = pathfind(robot.create_move(d), field)
+                # print(f"Robot {i + 1}: {steps_str(robot.path)}")
+                if robot.path:
+                    max_end_time = max(max_end_time, robot.path[-1].end_time)
+                else:
+                    max_end_time = float('inf')
+                if max_end_time >= best_max_end_time:
+                    break
+            if max_end_time < best_max_end_time:
+                best_max_end_time = max_end_time
+                best_paths = [robot.path for robot in field.robots]
+
+        # print(f"Average time: {(timer() - start) / len(all_robot_orders)}")
+        print(f"Time: {(timer() - start)}")
+
+    print("==================================================================")
+    for i, d in enumerate(destinations):
+        robot = field.robots[i]
+        robot.path = best_paths[i]
+        print(f"Robot {i + 1}: {steps_str(robot.path)}")
+        print(robot.path)

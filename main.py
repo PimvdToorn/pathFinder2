@@ -1,5 +1,5 @@
 from MathHelper import offset_line
-from PathFinder import pathfind
+from PathFinder import pathfind, get_best_paths
 from Types import L, P
 from objects.Move import Move, steps_str, list_str
 from objects.Field import Field
@@ -16,19 +16,13 @@ field.add_obstacles([
     Obstacle([P(5, 5), P(2, 5), P(1, 7), P(3, 9), P(10, 9), P(10, 8), P(3.5, 7.5), P(4, 6)], clearance)
 ])
 
-robot1 = Robot("R1", 0x01, clearance, 1, 1)
-robot2 = Robot("R2", 0x02, clearance, 9, 7)
-field.add_robots([robot1, robot2])
 
-d1 = P(6, 7)
-d2 = P(3, 4)
+start_positions = [P(0, 1), P(1, 1), P(9, 7), P(12, 4), P(5, 9.5), P(5, 2)]
+destinations = [P(6, 7), P(3, 4), P(6, 2), P(2, 9), P(4.5, 7), P(7, 3)]
 
-# robot1.path = pathfind(robot1.create_move(d1, 0), field)
-print("------------------------------------------------------------------")
-robot2.path = pathfind(robot2.create_move(d2), field)
 
-print(steps_str(robot1.path))
-print(robot1.path)
+for i, sp in enumerate(start_positions):
+    field.add_robot(Robot(f"R{i+1}", i, clearance, sp.x, sp.y))
 
-print(steps_str(robot2.path))
-print(robot2.path)
+get_best_paths(destinations, field)
+
