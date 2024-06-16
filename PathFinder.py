@@ -493,8 +493,8 @@ def set_best_paths(destinations: list[Point], field: Field) -> None:
     best_paths: list[list[Move]] = []
     timer = Timer()
     for index, dest_order in enumerate(all_dest_orders):
-        # print(f"\rProgress: {index * len(all_robot_orders)}/{total}", end="")
-        # timer_dest_order = Timer()
+        print(f"\rProgress: {index * len(all_robot_orders)}/{total}", end="")
+        timer_dest_order = Timer()
 
         for rindex, robot_order in enumerate(all_robot_orders):
             for robot in field.robots:
@@ -521,7 +521,8 @@ def set_best_paths(destinations: list[Point], field: Field) -> None:
                 best_paths = [robot.path for robot in field.robots]
 
         # print(f"Average time: {(timer() - start) / len(all_robot_orders)}")
-        # print(f"Time: {timer_dest_order.seconds():.3f}s")
+        print(f"  --  Time: {timer_dest_order.seconds():.3f}s", end="")
+        print(f"  --  Time left: {(timer.seconds()/(index+1)) * (len(all_dest_orders) - index - 1):.1f}s", end="")
     timer.stop()
 
     print("==================================================================")
