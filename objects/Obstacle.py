@@ -84,7 +84,6 @@ class Obstacle:
 
     def __getitem__(self, item: float) -> ClearancePoints:
         if item not in self.clearance_points:
-            print(f"Creating clearance points for {item}")
             self.clearance_points[item] = ClearancePoints(item, self.connected_vertices, self.edges)
 
         return self.clearance_points[item]

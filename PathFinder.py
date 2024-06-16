@@ -1,9 +1,9 @@
 from itertools import permutations
 from typing import Any
-from timeit import default_timer as timer
 
 from MathHelper import distance_point_to_line, line_intersection_t_u, line_intersection, distance, \
     get_tangent_points, get_closest_point, leg_from_base_and_lines, point_to_line_t, line_intersection_t, offset_line
+from Timer import Timer
 from Types import Point, Line
 from objects.Field import Field
 from objects.Move import Move, steps_str, min_distance, get_wait_move, remove_duplicates
@@ -491,9 +491,11 @@ def set_best_paths(destinations: list[Point], field: Field) -> None:
 
     best_max_end_time = float('inf')
     best_paths: list[list[Move]] = []
+    timer = Timer()
     for index, dest_order in enumerate(all_dest_orders):
-        print(f"Progress: {index * len(all_robot_orders)}/{total}")
-        start = timer()
+        # print(f"\rProgress: {index * len(all_robot_orders)}/{total}", end="")
+        # timer_dest_order = Timer()
+
         for rindex, robot_order in enumerate(all_robot_orders):
             for robot in field.robots:
                 robot.path = []
@@ -519,7 +521,8 @@ def set_best_paths(destinations: list[Point], field: Field) -> None:
                 best_paths = [robot.path for robot in field.robots]
 
         # print(f"Average time: {(timer() - start) / len(all_robot_orders)}")
-        print(f"Time: {(timer() - start)}")
+        # print(f"Time: {timer_dest_order.seconds():.3f}s")
+    timer.stop()
 
     print("==================================================================")
     for i, d in enumerate(destinations):
@@ -528,3 +531,4 @@ def set_best_paths(destinations: list[Point], field: Field) -> None:
         robot.destination = d
         print(f"Robot {i + 1}: {steps_str(robot.path)}")
         print(robot.path)
+    print(f"Total elapsed time: {timer.seconds():.3f}s")
