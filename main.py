@@ -1,13 +1,13 @@
 import asyncio
 import json
 import msvcrt
+import requests
 import time
 from math import pi
 
 import websockets
 
 from Controller import update_speed_l_and_r
-from MathHelper import offset_line, get_heading
 from PathFinder import pathfind, set_path, set_best_paths
 from Timer import Timer
 from Types import L, P
@@ -27,13 +27,14 @@ field.add_obstacles([
 ])
 
 
-# start_positions = [P(0, 1), P(1, 1), P(9, 7), P(12, 4), P(5, 9.5)]  # , P(5, 2)]
+start_positions = [P(0, 1), P(1, 1), P(9, 7), P(12, 4), P(5, 9.5)]  # , P(5, 2)]
 # destinations = [P(6, 7), P(3, 4), P(6, 2), P(2, 9), P(4.5, 7)]  # , P(7, 3)]
-start_positions = [P(0, 1)]
+# start_positions = [P(0, 1)]
 destinations = [P(0, -1)]
 
+address = "http://89.98.134.31:7807/"
 for i, sp in enumerate(start_positions):
-    field.add_robot(Robot(f"R{i+1}", i, clearance, sp))
+    field.add_robot(Robot(f"R{i+1}", address, clearance, sp))
 
 # set_best_paths(destinations, field)
 # timer = Timer()
@@ -68,18 +69,6 @@ print(update_speed_l_and_r(field.robots[0], 10_000_000, P(0.0, 0.0), 190, field)
 #     time.sleep(0.1)
 
 
-# async def handler(websocket, path):
-#     print("Connected to client")
-#     async for message in websocket:
-#         print(f"Received message: {message}")
-#         await websocket.send("Received message 3========D~~~~~~~")
-
-# start_server = websockets.serve(handler, "localhost", 8765)
-
-# asyncio.get_event_loop().run_until_complete(start_server)
-# print("WebSocket server started at ws://localhost:8765")
-# asyncio.get_event_loop().run_forever()
-
 timer = Timer()
 
 
@@ -93,36 +82,53 @@ async def handler(websocket):
             break
 
         field.robots[0].name = message
-        print(f"Received message: {message}")
         _ = asyncio.create_task(send(websocket))
+        print(f"Received message: {message}")
 
 
 async def send(websocket):
-    while True:
-        print("Sending data")
+    print("Sending data")
 
-        if msvcrt.kbhit():
-            char = msvcrt.getch()
-            if char == b'q':
-                print(field.robots[0].name)
+    if msvcrt.kbhit():
+        char = msvcrt.getch()
+        if char == b'q':
+            print(field.robots[0].name)
 
-        data = []
-        for robot in field.robots:
-            speed, heading = update_speed_l_and_r(robot, timer.ns(), P(0.05, 0.05), 0, field)
-            data.append({
-                "name": robot.name,
-                "speed": speed,
-                "heading": heading
-            })
+    data = []
+    for robot in field.robots:
+        left, right = update_speed_l_and_r(robot, timer.ns(), P(0.0, 0.0), 90, field)
+        print(f"Robot {robot.name} speeds: {left}, {right}")
+        data.append({
+            "name": robot.name,
+            "left": left,
+            "right": right
+        })
 
-        try:
-            await websocket.send(json.dumps(data))
+        _ = asyncio.create_task(send_robot_update(robot, left, right))
 
-        # client disconnected?
-        except websockets.ConnectionClosedOK:
-            break
+    try:
+        await websocket.send(json.dumps(data))
 
-        await asyncio.sleep(0.5)
+    # client disconnected?
+    except websockets.ConnectionClosedOK:
+        pass
+
+
+async def send_robot_update(robot: Robot, left: float, right: float):
+    try:
+        print(f"Sending data to {robot.name}")
+        response = requests.get(robot.address, params={
+            "left_motor_speed": left,
+            "right_motor_speed": right
+        }, timeout=0.1)
+        if response.status_code != 200:
+            print(f"Error sending data to {robot.name}: {response.status_code}")
+        else:
+            print(f"Sent data to {robot.name}")
+    except requests.exceptions.ConnectionError:
+        print(f"Error connecting to {robot.name}")
+    except requests.exceptions.Timeout:
+        print(f"Timeout connecting to {robot.name}")
 
 
 async def main():

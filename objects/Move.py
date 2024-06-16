@@ -14,7 +14,7 @@ class Move:
         self.line = line
         self.start_time = start_time
         # self.speed = speed
-        self.speed = 0.0000001
+        self.speed = 0.000_000_001
         if line.len == 0:
             self.speed = 0.0
         if end_time == 0:
@@ -35,7 +35,7 @@ class Move:
         return f"Move({self.start_time}, {self.end_time}, {self.start}, {self.end})"
 
     def __str__(self) -> str:
-        return f"Move({self.start_time/1000000:.1f}-{self.end_time/1000000:.1f}s, {self.start}, {self.end})"
+        return f"Move({self.start_time/1000000000:.1f}-{self.end_time/1000000000:.1f}s, {self.start}, {self.end})"
 
     @property
     def start(self):

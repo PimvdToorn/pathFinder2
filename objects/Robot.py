@@ -4,7 +4,7 @@ from objects.Move import Move
 
 
 class Robot:
-    def __init__(self, name: str, address: int, radius: float, location: Point = P(0, 0)) -> None:
+    def __init__(self, name: str, address: str, radius: float, location: Point = P(0, 0)) -> None:
         self.name = name
         self.address = address
         self.radius = radius
@@ -27,6 +27,9 @@ class Robot:
                 return move
 
     def get_expected_location(self, time: int) -> Point:
+        if not self.path:
+            return self.location
+
         if self.path[-1].end_time < time:
             return self.path[-1].end
 

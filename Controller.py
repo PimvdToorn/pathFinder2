@@ -15,12 +15,13 @@ SPEED_DEVIATION = 0.2
 
 def update_speed_l_and_r(robot: Robot, time: int, location: Point, heading: float, field: Field) \
         -> tuple[float, float]:
+    # print(f"Update Robot {robot.name} location: {location}, heading: {heading}")
     robot.location = location
     robot.heading = heading
     expected_location = robot.get_expected_location(time)
     distance_from_expected = distance(expected_location, location)
-    print(f"Location: {location}, Expected location: {robot.get_expected_location(time)}, "
-          f"Distance from expected: {distance_from_expected}")
+    # print(f"Location: {location}, Expected location: {robot.get_expected_location(time)}, "
+    #       f"Distance from expected: {distance_from_expected}")
 
     if distance_from_expected > MAX_DEVIATION:
         set_path(robot.destination, robot, field, time)
@@ -48,7 +49,7 @@ def update_speed_l_and_r(robot: Robot, time: int, location: Point, heading: floa
     perpendicular_deviation = distance_point_to_line(location, move.line)
     heading_offset = perpendicular_deviation/MAX_PERPENDICULAR_DEVIATION * 90
     new_heading = (expected_heading + heading_offset) % 360
-    print(f"Expected heading: {expected_heading}, Heading offset: {heading_offset}, New heading: {new_heading}, current heading: {heading}")
+    # print(f"Expected heading: {expected_heading}, Heading offset: {heading_offset}, New heading: {new_heading}, current heading: {heading}")
     turning_speed = new_heading - heading
     if turning_speed > 180:
         turning_speed -= 360
