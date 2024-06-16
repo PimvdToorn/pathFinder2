@@ -6,7 +6,7 @@ from math import pi
 
 import websockets
 
-from Controller import update_speed_and_heading
+from Controller import update_speed_l_and_r
 from MathHelper import offset_line, get_heading
 from PathFinder import pathfind, set_path, set_best_paths
 from Timer import Timer
@@ -27,15 +27,15 @@ field.add_obstacles([
 ])
 
 
-start_positions = [P(0, 1), P(1, 1), P(9, 7), P(12, 4), P(5, 9.5)]  # , P(5, 2)]
-destinations = [P(6, 7), P(3, 4), P(6, 2), P(2, 9), P(4.5, 7)]  # , P(7, 3)]
-# start_positions = [P(0, 1)]
-# destinations = [P(0, -1)]
+# start_positions = [P(0, 1), P(1, 1), P(9, 7), P(12, 4), P(5, 9.5)]  # , P(5, 2)]
+# destinations = [P(6, 7), P(3, 4), P(6, 2), P(2, 9), P(4.5, 7)]  # , P(7, 3)]
+start_positions = [P(0, 1)]
+destinations = [P(0, -1)]
 
 for i, sp in enumerate(start_positions):
     field.add_robot(Robot(f"R{i+1}", i, clearance, sp))
 
-set_best_paths(destinations, field)
+# set_best_paths(destinations, field)
 # timer = Timer()
 # runs = 40
 # for i in range(runs):
@@ -46,9 +46,9 @@ set_best_paths(destinations, field)
 # print(f"Total time: {timer.seconds():.1f}s")
 # print(f"Avg time: {timer.seconds()/runs:.3f}s")
 
-# set_path(destinations[0], field.robots[0], field, 0)
-# print(f"Robot 1 path: {path_str(field.robots[0].path)}")
-# print(update_speed_and_heading(field.robots[0], 10_000_000, P(0.05, 0.05), 0, field))
+set_path(destinations[0], field.robots[0], field, 0)
+print(f"Robot 1 path: {path_str(field.robots[0].path)}")
+print(update_speed_l_and_r(field.robots[0], 10_000_000, P(0.0, 0.0), 190, field))
 
 # timer = Timer()
 # while True:
@@ -108,7 +108,7 @@ async def send(websocket):
 
         data = []
         for robot in field.robots:
-            speed, heading = update_speed_and_heading(robot, timer.ns(), P(0.05, 0.05), 0, field)
+            speed, heading = update_speed_l_and_r(robot, timer.ns(), P(0.05, 0.05), 0, field)
             data.append({
                 "name": robot.name,
                 "speed": speed,
