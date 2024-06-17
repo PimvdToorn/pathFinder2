@@ -1,4 +1,5 @@
 from itertools import permutations
+from math import ceil
 from typing import Any
 
 from MathHelper import distance_point_to_line, line_intersection_t_u, line_intersection, distance, \
@@ -9,6 +10,8 @@ from objects.Field import Field
 from objects.Move import Move, steps_str, min_distance, get_wait_move, remove_duplicates
 from objects.Obstacle import Obstacle
 from objects.Robot import Robot
+
+ROBOT_TO_ROBOT_MARGIN_NS = 500_000
 
 
 def does_intersect(move: Move, obstacle: Obstacle) -> bool:
@@ -145,6 +148,8 @@ def path_around_obstacle(move: Move, obstacle: Obstacle, c_v_or_e: Point | Line,
 
 
 def path_around_robot(move: Move, r_move: Move, robot: Robot, field: Field) -> list[list[Move]]:
+    # print(f"Path around robot, move: {move.__repr__()}, r_move: {r_move.__repr__()}")
+    # input(f"Robot: {robot.name}, path: {steps_str(robot.path)}")
     clearance = move.clearance + r_move.clearance
     t_offset = (leg_from_base_and_lines(clearance, move.line, r_move.line) * 2) / r_move.speed
 
@@ -154,9 +159,9 @@ def path_around_robot(move: Move, r_move: Move, robot: Robot, field: Field) -> l
 
     r_time_at_intersection = time_at_intersection(r_move, move.line)
     move_time_at_intersection = time_at_intersection(move, r_move.line)
-    move_offset = t_offset - move_time_at_intersection + r_time_at_intersection
+    move_offset = t_offset - move_time_at_intersection + r_time_at_intersection + ROBOT_TO_ROBOT_MARGIN_NS
 
-    wait_move = get_wait_move(move.start, clearance, move.start_time, move_offset)
+    wait_move = get_wait_move(move.start, clearance, move.start_time, int(move_offset))
     return get_possible_paths(wait_move, field)
 
 
@@ -183,8 +188,11 @@ def get_possible_paths(move: Move, field: Field) -> list[list[Move]]:
             c_object = robot
 
     if not c_object:
+        # if move.waiting:
+        #     input("No object, waiting move")
         return [[move]]
     if move.waiting:
+        # input("Object found, waiting move")
         return []
 
     if isinstance(c_object, Obstacle):
@@ -352,7 +360,7 @@ def is_point_in_obstacle(p: Point, obstacle: Obstacle, clearance: float) -> bool
     if not (obstacle.x_min - clearance <= p.x <= obstacle.x_max + clearance and
             obstacle.y_min - clearance <= p.y <= obstacle.y_max + clearance):
         return False
-
+    # print(f"Checking point: {p.__repr__()}")
     intersections = 0
     for vertex in obstacle.vertices:
         if distance(vertex, p) < clearance:
@@ -379,7 +387,7 @@ def is_point_in_obstacle(p: Point, obstacle: Obstacle, clearance: float) -> bool
                 # print(f"edge too close: {edge}, dist.: {distance_point_to_line(p, edge)}")
                 return True
             elif 0 < t:
-                # print(f"edge hit: {edge}")
+                # print(f"edge hit: {edge.__repr__()}")
                 intersections += 1
 
     # print(f"edges: {edges}")
@@ -395,6 +403,13 @@ def pathfind(move: Move, field: Field) -> list[Move]:
         if is_point_in_obstacle(destination, obstacle, move.clearance):
             print("Destination in obstacle")
             return []
+
+    #     clearance_points = obstacle[move.clearance]
+    #     for v, op in clearance_points.outside_points_dict.items():
+    #         if is_point_in_obstacle(op, obstacle, move.clearance):
+    #             print("Outside point in obstacle")
+    #             obstacle[move.clearance].outside_points_dict[v] = Point(float('inf'), float('inf'))
+    # print(field.obstacles[0][move.clearance].outside_points_dict)
 
     paths = remove_duplicates(get_possible_paths(move, field))
     # for path in paths:
@@ -474,41 +489,96 @@ def pathfind(move: Move, field: Field) -> list[Move]:
         paths = paths_next_loop
 
 
+def remove_imp_outside_points(field: Field, clearance: float) -> None:
+    for obstacle in field.obstacles:
+        for v, op in obstacle[clearance].outside_points_dict.items():
+            if is_point_in_obstacle(op, obstacle, clearance):
+                obstacle[clearance].outside_points_dict[v] = Point(float('inf'), float('inf'))
+        hit_edges = []
+        for edge, ol in obstacle[clearance].outside_lines_dict.items():
+            hit = False
+            for ob in field.obstacles:
+                for e in ob.edges:
+                    t, u = line_intersection_t_u(ol, e)
+                    if 0 < t < 1 and 0 < u < 1:
+                        print(f"Edge {edge} outside line {ol} intersects with {e}")
+                        hit_edges.append(edge)
+                        for v, op in obstacle[clearance].outside_points_dict.items():
+                            if op == ol.p1 or op == ol.p2:
+                                print(f"Outside point {op} is on the edge {ol}")
+                                obstacle[clearance].outside_points_dict[v] = Point(float('inf'), float('inf'))
+                        obstacle[clearance].outside_lines_dict[edge] = Line(Point(float('inf'), float('inf')),
+                                                                            Point(float('inf'), float('inf')))
+                        hit = True
+                        break
+                if hit:
+                    break
+        for edge in hit_edges:
+            print(obstacle[clearance].outside_lines_dict[edge])
+        obstacle[clearance].update_outside_to_outside(obstacle.connected_vertices)
+
+    print("-----------------------------------")
+    for obstacle in field.obstacles:
+        for op in obstacle[clearance].outside_points_dict.values():
+            print(f"{op.bare_str()},", end="")
+        print()
+
+
 def set_path(destination: Point, robot: Robot, field: Field, time: int) -> None:
     robot.path = []
     move = robot.create_move(destination, time)
+    # remove_imp_outside_points(field, move.clearance)
     robot.path = pathfind(move, field)
 
 
-def set_best_paths(destinations: list[Point], field: Field) -> None:
+def set_best_paths(destinations: list[Point], field: Field, time: int, verbose_result=False, verbose_progress=False) -> None:
+    unavailable_robots = []
+    robots = []
+    for robot in field.robots:
+        if robot.destination:
+            unavailable_robots.append(robot)
+        elif robot.combined_robots:
+            robots.insert(0, robot)
+        else:
+            robots.append(robot)
+    field.robots = unavailable_robots + robots
+    if len(robots) < len(destinations):
+        print("Not enough robots")
+        for robot in field.robots:
+            print(f"Robot {robot.name} path: {steps_str(robot.path)}, destination: {robot.destination}")
+        return
+
     all_dest_orders = list(permutations(destinations))
-    all_robot_orders = list({p[:len(destinations)] for p in permutations(range(len(field.robots)))})
+    all_robot_orders = list(
+        {p[:len(destinations)] for p in permutations(range(len(unavailable_robots), len(field.robots)))}
+    )
     # print(all_dest_orders)
     # print(all_robot_orders)
-    # input()
     total = len(all_dest_orders) * len(all_robot_orders)
-    # print()
 
     best_max_end_time = float('inf')
-    best_paths: list[list[Move]] = []
+    best_paths: list[list[Move]] = [robot.path for robot in field.robots]
     timer = Timer()
+    timer_dest_order = Timer()
     for index, dest_order in enumerate(all_dest_orders):
-        print(f"\rProgress: {index * len(all_robot_orders)}/{total}", end="")
-        timer_dest_order = Timer()
+        if verbose_progress:
+            print(f"\rProgress: {index * len(all_robot_orders)}/{total}", end="")
+            timer_dest_order.reset()
 
         for rindex, robot_order in enumerate(all_robot_orders):
-            for robot in field.robots:
-                robot.path = []
+            # for robot in field.robots:
+            #     print(f"Robot {robot.name} path: {steps_str(robot.path)}")
             # print("-----------------------------------------------------------------------------------------")
             # print(f"Destination order: {dest_order}")
             # print(f"Robot order: {robot_order}")
 
             # todo remove known impossible orders
-            # todo add chosen destination to robot
             max_end_time = 0.0
             for i, d in enumerate(dest_order):
+                # print("---------------------------------")
                 robot = field.robots[robot_order[i]]
-                robot.path = pathfind(robot.create_move(d), field)
+                # print(f"Robot {robot.name} to {d}")
+                robot.path = pathfind(robot.create_move(d, time), field)
                 # print(f"Robot {i + 1}: {steps_str(robot.path)}")
                 if robot.path:
                     max_end_time = max(max_end_time, robot.path[-1].end_time)
@@ -520,16 +590,25 @@ def set_best_paths(destinations: list[Point], field: Field) -> None:
                 best_max_end_time = max_end_time
                 best_paths = [robot.path for robot in field.robots]
 
-        # print(f"Average time: {(timer() - start) / len(all_robot_orders)}")
-        print(f"  --  Time: {timer_dest_order.seconds():.3f}s", end="")
-        print(f"  --  Time left: {(timer.seconds()/(index+1)) * (len(all_dest_orders) - index - 1):.1f}s", end="")
+            for robot in robot_order:
+                field.robots[robot].path = []
+                field.robots[robot].destination = None
+
+        if verbose_progress:
+            print(f"  --  Time: {timer_dest_order.seconds():.3f}s", end="")
+            print(f"  --  Time left: {(timer.seconds() / (index + 1)) * (len(all_dest_orders) - index - 1):.1f}s", end="")
+
     timer.stop()
 
-    print("==================================================================")
-    for i, d in enumerate(destinations):
-        robot = field.robots[i]
-        robot.path = best_paths[i]
-        robot.destination = d
-        print(f"Robot {i + 1}: {steps_str(robot.path)}")
-        print(robot.path)
-    print(f"Total elapsed time: {timer.seconds():.3f}s")
+    if verbose_result:
+        print("==================================================================")
+    for i, r in enumerate(field.robots):
+        r.path = best_paths[i]
+        if r.path:
+            r.destination = r.path[-1].end
+
+        if verbose_result:
+            print(f"Robot {r.name}: {steps_str(r.path)}")
+            print(r.path)
+    if verbose_result:
+        print(f"Total elapsed time: {timer.seconds():.3f}s")

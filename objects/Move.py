@@ -14,7 +14,7 @@ class Move:
         self.line = line
         self.start_time = start_time
         # self.speed = speed
-        self.speed = 0.000_000_001
+        self.speed = 0.000_000_00025
         if line.len == 0:
             self.speed = 0.0
         if end_time == 0:
@@ -32,7 +32,7 @@ class Move:
         self.y_max = max(self.y1, self.y2) + clearance
 
     def __repr__(self) -> str:
-        return f"Move({self.start_time}, {self.end_time}, {self.start}, {self.end})"
+        return f"Move({self.start_time}, {self.end_time}, {self.start.__repr__()}, {self.end.__repr__()})"
 
     def __str__(self) -> str:
         return f"Move({self.start_time/1000000000:.1f}-{self.end_time/1000000000:.1f}s, {self.start}, {self.end})"

@@ -136,9 +136,9 @@ def leg_from_base_and_lines(base: float, l1: Line, l2: Line) -> float:
 
 
 def get_angle_to_y_axis(line: Line) -> float:
-    return atan2(line.x2 - line.x1, line.y2 - line.y1) / pi * 180
+    return atan2(line.x2 - line.x1, line.y2 - line.y1)
 
 
 def get_heading(line: Line) -> float:
     angle = get_angle_to_y_axis(line)
-    return angle if angle >= 0 else 360 + angle
+    return angle if angle >= 0 else 2*pi + angle

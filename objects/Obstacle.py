@@ -6,17 +6,17 @@ class ClearancePoints:
     def __init__(self, clearance: float, connected_vertices: dict[Point, list[Point]], edges: list[Line]):
         self.clearance = clearance + 0.0001
 
-        outside_lines_dict = {e: Line(0, 0, 0, 0) for e in edges}
-        for edge in outside_lines_dict:
-            outside_lines_dict[edge] = offset_line(edge, self.clearance)
+        self.outside_lines_dict = {e: Line(0, 0, 0, 0) for e in edges}
+        for edge in self.outside_lines_dict:
+            self.outside_lines_dict[edge] = offset_line(edge, self.clearance)
 
         self.outside_points_dict = {v: Point(0, 0) for v in connected_vertices.keys()}
         for vertex in connected_vertices.keys():
             v1, v2 = connected_vertices[vertex]
             l1 = Line(vertex, v1)
             l2 = Line(v2, vertex)
-            ol1 = outside_lines_dict[l1]
-            ol2 = outside_lines_dict[l2]
+            ol1 = self.outside_lines_dict[l1]
+            ol2 = self.outside_lines_dict[l2]
 
             if l1.slope == l2.slope:
                 ol2 = Line(vertex, P(vertex.x + 1, vertex.y + l1.slope_inv))
@@ -27,6 +27,15 @@ class ClearancePoints:
         #     print(f"{op.bare_str()},", end="")
         # print()
 
+        self.outside_to_outside_points = {
+            self.outside_points_dict[v]: [
+                self.outside_points_dict[connected_vertices[v][0]],
+                self.outside_points_dict[connected_vertices[v][1]]
+            ]
+            for v in connected_vertices.keys()
+        }
+
+    def update_outside_to_outside(self, connected_vertices: dict[Point, list[Point]]):
         self.outside_to_outside_points = {
             self.outside_points_dict[v]: [
                 self.outside_points_dict[connected_vertices[v][0]],

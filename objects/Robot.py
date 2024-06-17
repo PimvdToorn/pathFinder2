@@ -9,12 +9,13 @@ class Robot:
         self.address = address
         self.radius = radius
         self.location = location
-        self.destination = location
+        self.destination: Point | None = None
         self.heading = 0.0
         self.path: list[Move] = []
+        self.combined_robots: list[tuple[Robot, Point]] = []
 
     def get_move(self, time: int) -> Move | None:
-        if not self.path or self.path[0].start_time > time or self.path[-1].end_time < time:
+        if not self.path or self.path[-1].end_time < time:
             return None
 
         for move in self.path:

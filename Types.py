@@ -27,13 +27,13 @@ class Point:
         return hash((self.x, self.y))
 
     def __repr__(self):
-        return f"P({self.x}, {self.y})"
+        return f"P({self.x:.6f}, {self.y:.6f})"
 
     def __str__(self):
-        return f"P({self.x:.2f}, {self.y:.2f})"
+        return f"P({self.x:.3f}, {self.y:.3f})"
 
     def bare_str(self):
-        return f"({self.x}, {self.y})"
+        return f"({self.x:.3f}, {self.y:.3f})"
 
 
 class Line:
