@@ -7,7 +7,7 @@ from MathHelper import distance_point_to_line, line_intersection_t_u, line_inter
 from Timer import Timer
 from Types import Point, Line
 from objects.Field import Field
-from objects.Move import Move, steps_str, min_distance, get_wait_move, remove_duplicates
+from objects.Move import Move, steps_str, min_distance, get_wait_move, remove_duplicates, path_str
 from objects.Obstacle import Obstacle
 from objects.Robot import Robot
 
@@ -150,6 +150,11 @@ def path_around_obstacle(move: Move, obstacle: Obstacle, c_v_or_e: Point | Line,
 def path_around_robot(move: Move, r_move: Move, robot: Robot, field: Field) -> list[list[Move]]:
     # print(f"Path around robot, move: {move.__repr__()}, r_move: {r_move.__repr__()}")
     # input(f"Robot: {robot.name}, path: {steps_str(robot.path)}")
+    if r_move.waiting:
+        # print("Robot waiting")
+        wait_move = get_wait_move(move.start, move.clearance, move.start_time, int(r_move.end_time - move.start_time))
+        return get_possible_paths(wait_move, field)
+
     clearance = move.clearance + r_move.clearance
     t_offset = (leg_from_base_and_lines(clearance, move.line, r_move.line) * 2) / r_move.speed
 
@@ -415,7 +420,15 @@ def pathfind(move: Move, field: Field) -> list[Move]:
     # for path in paths:
     #     print(f"Path: {steps_str(path)}")
     destination_reached_loops = 0
+    loops = 1
     while True:
+        # print(f"Loop: {loops}")
+        # for path in paths:
+        #     print(f"    Path: {path_str(path)}")
+        loops += 1
+        if loops > 100:
+            print("Too many loops")
+            return []
         # print(f"Destination reached loops: {destination_reached_loops}")
         if not paths:
             print("No possible paths")

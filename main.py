@@ -3,12 +3,13 @@ import json
 import msvcrt
 import requests
 import time
-from math import pi
+from math import pi, cos, sin
 
 import websockets
 from orjson import orjson
 
 from Controller import update_speed_l_and_r
+from MathHelper import distance
 from PathFinder import pathfind, set_path, set_best_paths
 from Timer import Timer
 from Types import L, P, Point
@@ -143,21 +144,45 @@ async def command_input():
             available_robots = [r for r in field.robots if r.destination is None]
             while True:
                 amount = int_input("Enter number of robots in combined bot: ")
+                if amount == 0:
+                    return
                 if 0 < amount <= len(available_robots):
                     break
                 print(f"Invalid number of robots, should be between 1 and {len(available_robots)}")
 
-            robot_positions: list[Point] = []
-            for index in range(amount):
-                x = float_input(f"Enter x position for robot {index + 1}: ")
-                y = float_input(f"Enter y position for robot {index + 1}: ")
-                robot_positions.append(P(x, y))
+            for i, robot in enumerate(available_robots):
+                print(f"{i+1} - {robot.name}: {robot.location.bare_str()}")
+
+            used_robot_numbers = []
+            for i in range(amount):
+                while True:
+                    robot_number = int_input(f"Enter robot number {i + 1}: ", 1)
+                    if robot_number in used_robot_numbers:
+                        print("Robot already used")
+                        continue
+                    used_robot_numbers.append(robot_number)
+                    break
+
+            used_robots = [available_robots[i-1] for i in used_robot_numbers]
 
             x = float_input(f"Enter x position for the destination: ")
             y = float_input(f"Enter y position for the destination: ")
             destination = P(x, y)
 
-            average_position = P(sum(p.x for p in robot_positions) / amount, sum(p.y for p in robot_positions) / amount)
+            average_position = sum([r.location for r in used_robots], start=Point(0, 0)) / amount
+            distances = {distance(r.location, average_position): r for r in used_robots}
+            furthest_distance = max(d for d in distances)
+            combined_robot = Robot(
+                "Combined",
+                "",
+                furthest_distance+distances[furthest_distance].radius,
+                average_position
+            )
+            for robot in used_robots:
+                combined_robot.combined_robots.append((robot, robot.location - average_position))
+                field.robots.remove(robot)
+            field.robots.append(combined_robot)
+            set_path(destination, combined_robot, field, timer.ns())
 
 
 async def handler(websocket):
@@ -173,12 +198,19 @@ async def handler(websocket):
 
         # print(dict_message)
         for robot in field.robots:
-            robot.location = P(*dict_message["position_" + robot.name])
-            robot.heading = (dict_message["rotation_" + robot.name] - pi) % (2*pi)
-            # if robot.heading < 0:
-            #     robot.heading = -robot.heading + pi
-            # # else:
-            # #     robot.heading = 2*pi - robot.heading
+            if robot.combined_robots:
+                locations = []
+                headings = []
+                for r in robot.combined_robots:
+                    r[0].location = P(*dict_message["position_" + r[0].name])
+                    r[0].heading = (dict_message["rotation_" + r[0].name] - pi) % (2*pi)
+                    locations.append(r[0].location)
+                    headings.append(r[0].heading)
+                robot.location = sum(locations, start=Point(0, 0)) / len(locations)
+                robot.heading = sum(headings) / len(headings)
+            else:
+                robot.location = P(*dict_message["position_" + robot.name])
+                robot.heading = (dict_message["rotation_" + robot.name] - pi) % (2*pi)
 
             # print(dict_message["rotation_" + robot.name])
             # print(f"Robot {robot.name} location: {robot.location}, heading: {robot.heading}")
@@ -201,6 +233,14 @@ async def send(websocket, stop=False):
         else:
             left, right = update_speed_l_and_r(robot, timer.ns(), field)
         # print(f"Robot {robot.name} speeds: {left}, {right}")
+
+        if robot.combined_robots:
+            heading = robot.heading
+            for combined_robot, offset in robot.combined_robots:
+                expected_location = combined_robot.location + offset.rotate(heading)
+                left_c, right_c = update_speed_l_and_r(combined_robot, timer.ns(), field)
+                left += left_c
+                right += right_c
         data[robot.name] = [left, right]
 
         if robot.address:

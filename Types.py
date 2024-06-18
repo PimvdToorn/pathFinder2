@@ -1,4 +1,4 @@
-from math import sqrt
+from math import sqrt, cos, sin
 
 
 class Point:
@@ -22,6 +22,17 @@ class Point:
 
     def __mul__(self, other):
         return Point(self.x * other, self.y * other)
+
+    def __truediv__(self, other):
+        if isinstance(other, Point):
+            return Point(self.x / other.x, self.y / other.y)
+        if isinstance(other, (int, float)):
+            return Point(self.x / other, self.y / other)
+
+    def rotate(self, angle: float) -> 'Point':
+        x = self.x * cos(angle) - self.y * sin(angle)
+        y = self.x * sin(angle) + self.y * cos(angle)
+        return Point(x, y)
 
     def __hash__(self):
         return hash((self.x, self.y))

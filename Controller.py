@@ -16,41 +16,47 @@ SPEED = 0.7
 SPEED_DEVIATION = 0.3
 
 
-def update_speed_l_and_r(r: Robot, time: int, field: Field) \
-        -> tuple[float, float]:
-    expected_location = r.get_expected_location(time)
-    distance_from_expected = distance(expected_location, r.location)
-    # print(f"{r.name} location: {r.location.bare_str()}, Expected location: {expected_location.bare_str()}, "
-    #       f"Distance from expected: {distance_from_expected}")
-
-    if distance_from_expected > MAX_DEVIATION:
-        # print(f"{r.name} has deviated too far from its path. Recalculating path.")
-        set_path(r.destination, r, field, time)
-        # print(f"New path: {path_str(r.path)}")
+def update_speed_l_and_r(r: Robot, time: int, field: Field, expected_location=None) -> tuple[float, float]:
+    if expected_location is None:
         expected_location = r.get_expected_location(time)
         distance_from_expected = distance(expected_location, r.location)
+        # print(f"{r.name} location: {r.location.bare_str()}, Expected location: {expected_location.bare_str()}, "
+        #       f"Distance from expected: {distance_from_expected}")
 
-    # todo wen destination
-    move = r.get_move(time)
-    expected_heading = r.get_expected_heading(time)
-    if move is None:
-        if r.destination is not None:
-            if distance2(r.location, r.destination) < DESTINATION_DEADZONE:
-                r.destination = None
-                return 0.0, 0.0
-        # robot.destination = None
+        if distance_from_expected > MAX_DEVIATION and r.destination is not None:
+            # print(f"{r.name} has deviated too far from its path. Recalculating path.")
+            set_path(r.destination, r, field, time)
+            # print(f"New path: {path_str(r.path)}")
+            expected_location = r.get_expected_location(time)
+            distance_from_expected = distance(expected_location, r.location)
+
+        move = r.get_move(time)
+        expected_heading = r.get_expected_heading(time)
         turning_speed = expected_heading - r.heading
         if turning_speed > pi:
-            turning_speed -= 2*pi
+            turning_speed -= 2 * pi
         elif turning_speed < -pi:
-            turning_speed += 2*pi
+            turning_speed += 2 * pi
         turning_speed /= pi
-        return turning_speed, -turning_speed
 
-    if move.waiting:
-        if distance_from_expected < WAITING_DEADZONE:
-            return 0.0, expected_heading
-        return min(1.0, distance_from_expected/WAITING_SLOWDOWN), get_heading(Line(r.location, move.end))
+        if move is None:
+            if r.destination is not None:
+                if distance2(r.location, r.destination) < DESTINATION_DEADZONE:
+                    r.destination = None
+                    r.path = []
+                    return 0.0, 0.0
+            return turning_speed, -turning_speed
+
+        if move.waiting:
+            if distance_from_expected < WAITING_DEADZONE:
+                return 0.0, 0.0
+
+    move = r.get_move(time)
+    if not move.waiting:
+        expected_heading = r.get_expected_heading(time)
+    else:
+        # print(f"{r.name} is waiting")
+        expected_heading = get_heading(Line(r.location, move.end))
 
     perpendicular_deviation = distance_point_to_line(r.location, move.line)
     heading_offset = perpendicular_deviation/MAX_PERPENDICULAR_DEVIATION * 0.25*pi
