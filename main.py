@@ -210,10 +210,12 @@ async def handler(websocket):
                 robot.heading = sum(headings) / len(headings)
             else:
                 robot.location = P(*dict_message["position_" + robot.name])
-                robot.heading = (dict_message["rotation_" + robot.name] - pi) % (2*pi)
+                rotation = dict_message["rotation_" + robot.name]
+                rotation = -rotation[3] if rotation[2] > 0 else rotation[3]
+                robot.heading = (rotation - pi) % (2*pi)
 
             # print(dict_message["rotation_" + robot.name])
-            # print(f"Robot {robot.name} location: {robot.location}, heading: {robot.heading}")
+            print(f"Robot {robot.name} location: {robot.location}, heading: {robot.heading}")
 
         if msvcrt.kbhit():
             _ = await asyncio.create_task(send(websocket, True))
