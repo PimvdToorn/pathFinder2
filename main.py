@@ -8,9 +8,9 @@ from math import pi, cos, sin
 import websockets
 from orjson import orjson
 
-from Controller import update_speed_l_and_r
-from MathHelper import distance
-from PathFinder import pathfind, set_path, set_best_paths
+from Controller import update_speed_l_and_r, get_expected_location_and_move, update_combined_speed_l_and_r
+from MathHelper import distance, get_heading
+from BestPaths import set_path, set_best_paths
 from Timer import Timer
 from Types import L, P, Point
 from objects.Move import Move, steps_str, path_str
@@ -20,7 +20,7 @@ from objects.Robot import Robot
 
 field = Field((3000, 3000))
 
-clearance = 0.2
+clearance = 0.08
 
 field.add_obstacles([
     # Obstacle([P(2, 1), P(2, 3), P(6, 4), P(4, 2), P(6, 0), P(4, 1)]),
@@ -42,8 +42,10 @@ address = "http://89.98.134.31:7807/"
 #         name = f"C{i-1}"
 #     field.add_robot(Robot(name, "", clearance, sp))
 
-field.add_robot(Robot("R1", "", clearance, P(-1.0300000, 1.5500000)))
-field.add_robot(Robot("R2", "", clearance, P(-0.7900000, 1.5500000)))
+# field.add_robot(Robot("R1", "http://172.20.10.3/", clearance, P(0, 0)))
+# field.add_robot(Robot("R2", "http://172.20.10.5/", clearance, P(-1, 0)))
+field.add_robot(Robot("R1", "", clearance, P(0, 0)))
+field.add_robot(Robot("R2", "", clearance, P(-1, 0)))
 field.add_robot(Robot("C1", "", clearance, P(0, 0)))
 field.add_robot(Robot("C2", "", clearance, P(0.5, 0)))
 field.add_robot(Robot("C3", "", clearance, P(-0.3500000, -0.2599019)))
@@ -51,50 +53,11 @@ field.add_robot(Robot("C4", "", clearance, P(0.1700000, 0.5500981)))
 
 # set_path(P(0, 10), field.robots[0], field, 0)
 # set_path(P(1, 10), field.robots[1], field, 0)
-set_path(P(0, 2), field.robots[2], field, 0)
-set_path(P(0.5, 2), field.robots[3], field, 0)
+# set_path(P(0, 2), field.robots[2], field, 0)
+# set_path(P(0.5, 2), field.robots[3], field, 0)
 # set_path(P(1, 2), field.robots[4], field, 0)
 # set_path(P(1.5, 2), field.robots[5], field, 0)
 print("Done calculating paths")
-
-# set_path(P(8, 2), field.robots[0], field, 0)
-# set_best_paths([P(1, 0)], field, 0, True, True)
-# input()
-# print(f"Robot 1 path: {steps_str(field.robots[0].path)}")
-# timer = Timer()
-# runs = 40
-# for i in range(runs):
-#     set_best_paths(destinations, field)
-#     print(f"Run {i+1} done, elapsed time: {timer.seconds():.1f}s")
-#
-# timer.stop()
-# print(f"Total time: {timer.seconds():.1f}s")
-# print(f"Avg time: {timer.seconds()/runs:.3f}s")
-
-# set_path(destinations[0], field.robots[0], field, 0)
-# print(f"Robot 1 path: {path_str(field.robots[0].path)}")
-# print(update_speed_l_and_r(field.robots[0], 10_000_000, P(0.0, 0.0), 190, field))
-
-# combined_robot = Robot("Combined", address, 1, P(0, 0))
-# set_path(P(10, 11), combined_robot, field, 0)
-# print(f"Combined path: {path_str(combined_robot.path)}")
-
-# timer = Timer()
-# while True:
-#     print(f"\rTime: {timer.seconds():.1f}s", end="")
-#
-#     if msvcrt.kbhit():
-#         char = msvcrt.getch()
-#         if char == b'q':
-#             break
-#         # if char == b'f': todo formation
-#         if b'0' < char <= b'9':
-#             if int(char) > len(field.robots):
-#                 print(f"\rThere is no robot {int(char)}")
-#                 continue
-#             robot = field.robots[int(char) - 1]
-#             print(f"\rRobot {robot.name} path: {path_str(robot.path)}")
-#     time.sleep(0.1)
 
 
 timer = Timer()
@@ -138,7 +101,8 @@ async def command_input():
                 x = float_input(f"Enter x position for destination {i + 1}: ")
                 y = float_input(f"Enter y position for destination {i + 1}: ")
                 destinations.append(P(x, y))
-            set_best_paths(destinations, field, timer.ns())
+            set_best_paths(destinations, field, timer.ns(), True)
+            print("Done calculating paths====================================================================")
 
         case b'c':
             available_robots = [r for r in field.robots if r.destination is None]
@@ -198,12 +162,17 @@ async def handler(websocket):
 
         # print(dict_message)
         for robot in field.robots:
+            # todo does this work?
             if robot.combined_robots:
                 locations = []
                 headings = []
                 for r in robot.combined_robots:
                     r[0].location = P(*dict_message["position_" + r[0].name])
-                    r[0].heading = (dict_message["rotation_" + r[0].name] - pi) % (2*pi)
+
+                    rotation = dict_message["rotation_" + r[0].name]
+                    rotation = -rotation[3] if rotation[2] > 0 else rotation[3]
+                    r[0].heading = rotation % (2 * pi)
+
                     locations.append(r[0].location)
                     headings.append(r[0].heading)
                 robot.location = sum(locations, start=Point(0, 0)) / len(locations)
@@ -212,10 +181,10 @@ async def handler(websocket):
                 robot.location = P(*dict_message["position_" + robot.name])
                 rotation = dict_message["rotation_" + robot.name]
                 rotation = -rotation[3] if rotation[2] > 0 else rotation[3]
-                robot.heading = (rotation - pi) % (2*pi)
+                robot.heading = rotation % (2*pi)
 
             # print(dict_message["rotation_" + robot.name])
-            print(f"Robot {robot.name} location: {robot.location}, heading: {robot.heading}")
+            # print(f"Robot {robot.name} location: {robot.location}, heading: {robot.heading}")
 
         if msvcrt.kbhit():
             _ = await asyncio.create_task(send(websocket, True))
@@ -237,13 +206,14 @@ async def send(websocket, stop=False):
         # print(f"Robot {robot.name} speeds: {left}, {right}")
 
         if robot.combined_robots:
-            heading = robot.heading
+            expected_location, move = get_expected_location_and_move(robot, timer.ns(), field)
+            heading = get_heading(move.line)
             for combined_robot, offset in robot.combined_robots:
                 expected_location = combined_robot.location + offset.rotate(heading)
-                left_c, right_c = update_speed_l_and_r(combined_robot, timer.ns(), field)
-                left += left_c
-                right += right_c
+                left, right = update_combined_speed_l_and_r(combined_robot, expected_location, move, heading)
         data[robot.name] = [left, right]
+
+        # print(f"Robot {robot.name} destination: {robot.destination}")
 
         if robot.address:
             _ = asyncio.create_task(send_robot_update(robot, left, right))
@@ -258,22 +228,24 @@ async def send(websocket, stop=False):
 
 async def send_robot_update(robot: Robot, left: float, right: float):
     try:
-        print(f"Sending data to {robot.name}")
         response = requests.get(robot.address, params={
             "left_motor_speed": left,
             "right_motor_speed": right
-        }, timeout=0.1)
+        })
+        print(f"Sent data to {robot.name}: left_motor_speed: {left}, right_motor_speed: {right}")
         if response.status_code != 200:
             print(f"Error sending data to {robot.name}: {response.status_code}")
+    except requests.ConnectionError as e:
+        if isinstance(e.args[0], ConnectionResetError):
+            print(f"Connection to {robot.name} was forcibly closed by the remote host.")
         else:
-            print(f"Sent data to {robot.name}")
-    except requests.exceptions.ConnectionError:
-        print(f"Error connecting to {robot.name}")
-    except requests.exceptions.Timeout:
-        print(f"Timeout connecting to {robot.name}")
+            print(f"An error occurred while trying to connect to {robot.name}: {e}")
+    except requests.RequestException as e:
+        print(f"An error occurred while trying to send data to {robot.name}: {e}")
 
 
 async def main():
+    # async with websockets.serve(handler, "172.20.10.8", 8765):
     async with websockets.serve(handler, "localhost", 8765):
         await asyncio.Future()  # run forever
 

@@ -14,14 +14,17 @@ class Move:
         self.line = line
         self.start_time = start_time
         # self.speed = speed
-        self.speed = 0.000_000_00025
+        self.speed = 0.000_000_00024
         if line.len == 0:
             self.speed = 0.0
         if end_time == 0:
             if self.speed == 0.0:
                 self.end_time = start_time
             else:
-                self.end_time = start_time + ceil(self.line.len/self.speed)
+                try:
+                    self.end_time = start_time + ceil(line.len/self.speed)
+                except ValueError:
+                    input(f"Move: {line}, len: {line.len}, {self.speed}")
         else:
             self.end_time = end_time
 
