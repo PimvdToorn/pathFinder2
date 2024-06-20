@@ -14,6 +14,7 @@ WAITING_DEADZONE = 0.02
 WAITING_SLOWDOWN = 0.1
 SPEED = 0.7
 SPEED_DEVIATION = 0.3
+SPEED_LIMITER = 0.3
 
 
 def update_speed_l_and_r(r: Robot, time: int, field: Field) -> tuple[float, float]:
@@ -72,11 +73,11 @@ def update_speed_l_and_r(r: Robot, time: int, field: Field) -> tuple[float, floa
 
     speed_deviation = SPEED_DEVIATION * (dest_distance_diff / MAX_DEVIATION)
     speed = SPEED + speed_deviation
-    rotation_deviation = turning_speed * speed
+    rotation_deviation = turning_speed  # / min(1.0, dest_distance)  # * speed
 
     # print(f"SPEED: {speed}, ROTATION: {rotation_deviation}")
-    return (min(1.0, max(-1.0, speed + rotation_deviation)),
-            min(1.0, max(-1.0, speed - rotation_deviation)))
+    return (min(1.0, max(-1.0, speed + rotation_deviation)) * SPEED_LIMITER,
+            min(1.0, max(-1.0, speed - rotation_deviation)) * SPEED_LIMITER)
 
 
 def get_expected_location_and_move(r: Robot, time: int, field: Field) -> tuple[Point, Move]:

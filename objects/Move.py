@@ -14,7 +14,8 @@ class Move:
         self.line = line
         self.start_time = start_time
         # self.speed = speed
-        self.speed = 0.000_000_00024
+        # self.speed = 0.000_000_00024
+        self.speed = 0.000_000_00008
         if line.len == 0:
             self.speed = 0.0
         if end_time == 0:

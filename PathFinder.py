@@ -7,7 +7,7 @@ from MathHelper import distance_point_to_line, line_intersection_t_u, line_inter
 from Timer import Timer
 from Types import Point, Line
 from objects.Field import Field
-from objects.Move import Move, steps_str, min_distance, get_wait_move, remove_duplicates, path_str
+from objects.Move import Move, steps_str, min_distance, get_wait_move, remove_duplicates, path_str, path_in_paths
 from objects.Obstacle import Obstacle
 from objects.Robot import Robot
 
@@ -93,13 +93,13 @@ def first_robot_intersection(move: Move, robot: Robot) -> tuple[float, Move]:
             continue
 
         min_dist, t = min_distance(move, r_move)
-        if min_dist < move.clearance + r_move.clearance:
-            print("-------------------------------------------")
-            print(f"    move: {move}, r_move: {r_move}")
-            print(f"    min_dist: {min_dist}, t: {t}")
-            print(f"    clearance: {move.clearance + r_move.clearance}")
-            print(f"    Robot: {robot.name}, path: {steps_str(robot.path)}")
-            print("-------------------------------------------")
+        # if min_dist < move.clearance + r_move.clearance:
+        #     print("-------------------------------------------")
+        #     print(f"    move: {move}, r_move: {r_move}")
+        #     print(f"    min_dist: {min_dist}, t: {t}")
+        #     print(f"    clearance: {move.clearance + r_move.clearance}")
+        #     print(f"    Robot: {robot.name}, path: {steps_str(robot.path)}")
+        #     print("-------------------------------------------")
         if min_dist == float('nan'):
             continue
         if min_dist < move.clearance + r_move.clearance and t < lowest_t:
@@ -152,10 +152,10 @@ def path_around_obstacle(move: Move, obstacle: Obstacle, c_v_or_e: Point | Line,
 
 
 def path_around_robot(move: Move, r_move: Move, robot: Robot, field: Field, depth: int) -> list[list[Move]]:
-    print(f"Path around robot, move: {move.__repr__()}, r_move: {r_move.__repr__()}")
-    print(f"Robot: {robot.name}, path: {steps_str(robot.path)}")
+    # print(f"Path around robot, move: {move.__repr__()}, r_move: {r_move.__repr__()}")
+    # print(f"Robot: {robot.name}, path: {steps_str(robot.path)}")
     if r_move.waiting:
-        print("Robot waiting")
+        # print("Robot waiting")
         wait_move = get_wait_move(move.start, move.clearance, move.start_time, int(r_move.end_time - move.start_time))
         return get_possible_paths(wait_move, field, depth)
 
@@ -178,21 +178,21 @@ def path_around_robot(move: Move, r_move: Move, robot: Robot, field: Field, dept
         else:
             return []
 
-        print("Move around end")
+        # print("Move around end")
         if distance(move.start, r_move.end) < clearance:
-            input("Start too close to end")
+            # input("Start too close to end")
             return []
         if distance(move.end, r_move.end) < clearance:
-            input("End too close to other end")
+            # input("End too close to other end")
             return []
         around_points = get_points_around_robot(move.start, move.end, r_move.end, clearance)
-        print(f"Around points: {around_points}")
+        # print(f"Around points: {around_points}")
         move1 = Move(Line(move.start, around_points[0]), move.clearance, wait_move.end_time)
         move2 = Move(Line(move.start, around_points[1]), move.clearance, wait_move.end_time)
-        print(f"Move1: {move1}, Move2: {move2}")
-        print("Move 1:")
+        # print(f"Move1: {move1}, Move2: {move2}")
+        # print("Move 1:")
         path1 = get_possible_paths(move1, field, depth)
-        print("Move 2:")
+        # print("Move 2:")
         path2 = get_possible_paths(move2, field, depth)
         paths = path1 + path2
         for path in paths:
@@ -200,9 +200,9 @@ def path_around_robot(move: Move, r_move: Move, robot: Robot, field: Field, dept
         return paths
 
     wait_move = get_wait_move(move.start, move.clearance, move.start_time, int(move_offset))
-    print(f"Wait move: {wait_move}")
+    # print(f"Wait move: {wait_move}")
     paths = get_possible_paths(wait_move, field, depth)
-    print(paths)
+    # print(paths)
     return paths
 
 
@@ -238,7 +238,7 @@ def get_possible_paths(move: Move, field: Field, depth: int) -> list[list[Move]]
         #     input("No object, waiting move")
         return [[move]]
     if move.waiting:
-        print(f"Move: {move}")
+        # print(f"Move: {move}")
         # input(f"Object found, waiting move, object: {c_object.name}, t: {c_t}, ")
         return []
 
@@ -292,7 +292,7 @@ def reduce_path(path: list[Move], field: Field, depth: int) -> list[list[Move]]:
         if intersects:
             for obstacle in field.obstacles:
                 if does_intersect(path[checking_index], obstacle):
-                    # print(f"Existing move intersects: {path[checking_index]}, path: {steps_str(path)}")
+                    print(f"Existing move intersects: {path[checking_index]}, path: {steps_str(path)}")
                     return get_possible_paths(path[checking_index], field, depth)
             new_path.insert(checking_index, path[checking_index])
 
@@ -344,16 +344,16 @@ def reduce_corners(path: list[Move], field: Field) -> list[Move]:
         if move.waiting:
             continue
         for obstacle in field.obstacles:
-            for v, op in obstacle[move.clearance].outside_points_dict.items():
+            for v, op in obstacle[move.CLEARANCE].outside_points_dict.items():
                 if op == move.end:
                     if obstacle.is_acute[v] or \
-                            move.start not in obstacle[move.clearance].outside_points_dict.values() or \
-                            new_path[index + 1].end not in obstacle[move.clearance].outside_points_dict.values():
+                            move.start not in obstacle[move.CLEARANCE].outside_points_dict.values() or \
+                            new_path[index + 1].end not in obstacle[move.CLEARANCE].outside_points_dict.values():
                         closest_point = get_closest_to_vertex(move.start, new_path[index + 1].end, v, op,
-                                                              move.clearance)
+                                                              move.CLEARANCE)
                         new_path[index] = Move(
                             Line(move.start, closest_point),
-                            move.clearance,
+                            move.CLEARANCE,
                             move.start_time
                         )
                         # print(f"New path: {new_path}")
@@ -361,7 +361,7 @@ def reduce_corners(path: list[Move], field: Field) -> list[Move]:
                         # print(f"New move: {new_path[index]}")
                         new_path[index + 1] = Move(
                             Line(closest_point, new_path[index + 1].end),
-                            move.clearance,
+                            move.CLEARANCE,
                             new_path[index].end_time
                         )
                         new_path = new_path[:index] + update_times(new_path[index:])
@@ -464,16 +464,16 @@ def pathfind(move: Move, field: Field) -> list[Move]:
     destination_reached_loops = 0
     loops = 1
     while True:
-        print(f"Loop: {loops}")
-        for path in paths:
-            print(f"    Path: {path}")
+        # print(f"Loop: {loops}")
+        # for path in paths:
+        #     print(f"    Path: {path}")
         loops += 1
         if loops > 20:
-            print("Too many loops")
+            # print("Too many loops")
             return []
         # print(f"Destination reached loops: {destination_reached_loops}")
         if not paths:
-            print("No possible paths")
+            # print("No possible paths")
             return []
 
         paths_next_loop: list[list[Move]] = []
@@ -541,7 +541,9 @@ def pathfind(move: Move, field: Field) -> list[Move]:
             if shortest_path:
                 return shortest_path
 
+        paths_next_loop = remove_duplicates(paths_next_loop)  # todo check why so many duplicates
         paths = paths_next_loop
+        # paths = [p for p in paths_next_loop if not path_in_paths(p, paths)]
 
 
 def remove_imp_outside_points(field: Field, clearance: float) -> None:

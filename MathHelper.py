@@ -116,12 +116,12 @@ def get_points_around_robot(p1: Point, p2: Point, rp: Point, clearance: float) -
     clearance = clearance + 0.0001
     tps1 = get_tangent_points(p1, rp, clearance)
     tps2 = get_tangent_points(p2, rp, clearance)
-    print(f"    tps1: {tps1}, tps2: {tps2}")
+    # print(f"    tps1: {tps1}, tps2: {tps2}")
 
     # Take the outermost tangent point
     paired_tps1 = tps1[0], get_closest_point(tps1[0], tps2)
     paired_tps2 = tps1[1], get_closest_point(tps1[1], tps2)
-    print(f"    paired_tps1: {paired_tps1}, paired_tps2: {paired_tps2}")
+    # print(f"    paired_tps1: {paired_tps1}, paired_tps2: {paired_tps2}")
 
     return line_intersection(Line(p1, paired_tps1[0]), Line(p2, paired_tps1[1])), \
         line_intersection(Line(p1, paired_tps2[0]), Line(p2, paired_tps2[1]))
@@ -157,3 +157,7 @@ def get_angle_to_y_axis(line: Line) -> float:
 def get_heading(line: Line) -> float:
     angle = get_angle_to_y_axis(line)
     return angle if angle >= 0 else 2*pi + angle
+
+
+def remove_duplicates_ordered(li: list) -> list:
+    return [li[i] for i in range(len(li)) if i == 0 or li[i] != li[i - 1]]
