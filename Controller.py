@@ -90,7 +90,7 @@ def get_expected_location_and_move(r: Robot, time: int, field: Field) -> tuple[P
 
     expected_location = r.get_expected_location(time)
     distance_from_expected = distance(expected_location, r.location)
-    print(f"{r.name} distance from expected: {distance_from_expected}")
+    # print(f"{r.name} distance from expected: {distance_from_expected}")
 
     if distance_from_expected > MAX_DEVIATION:
         print(f"{r.name} has deviated too far from its path. Recalculating path.")
@@ -131,6 +131,8 @@ def update_combined_speed_l_and_r(r: Robot, move: Move, time: int, only_rotate=F
         if distance_from_expected < WAITING_DEADZONE:
             return 0.0, 0.0
         new_heading = get_heading(Line(r.location, move.end))
+    elif only_rotate:
+        new_heading = get_heading(move.line)
     else:
         expected_heading = get_heading(move.line)
         perpendicular_deviation = distance_point_to_line(r.location, move.line)
@@ -146,8 +148,8 @@ def update_combined_speed_l_and_r(r: Robot, move: Move, time: int, only_rotate=F
     turning_speed /= pi
     # print(f"Turning speed: {turning_speed:.2f}")
 
-    rotation_deviation = turning_speed / min(1.0, max(0.5, dest_distance * 10))  # * speed
+    rotation_deviation = turning_speed / min(1.0, max(0.5, dest_distance * 10))
 
-    print(f"SPEED: {speed}, ROTATION: {rotation_deviation}")
+    # print(f"SPEED: {speed}, ROTATION: {rotation_deviation}")
     return (min(1.0, max(-1.0, speed + rotation_deviation)) * SPEED_LIMITER,
             min(1.0, max(-1.0, speed - rotation_deviation)) * SPEED_LIMITER)

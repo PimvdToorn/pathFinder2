@@ -218,7 +218,6 @@ async def handler(websocket):
             # todo does this work?
             if robot.combined_robots:
                 locations = []
-                # headings = []
                 for r in robot.combined_robots:
                     r[0].location = P(*dict_message["position_" + r[0].name])
 
@@ -227,9 +226,8 @@ async def handler(websocket):
                     r[0].heading = rotation % (2 * pi)
 
                     locations.append(r[0].location)
-                    # headings.append(r[0].heading)
+                    print(f"Robot {r[0].name} location: {r[0].location}, heading: {r[0].heading}")
                 robot.location = sum(locations, start=Point(0, 0)) / len(locations)
-                # robot.heading = sum(headings) / len(headings)
             else:
                 robot.location = P(*dict_message["position_" + robot.name])
                 rotation = dict_message["rotation_" + robot.name]
@@ -271,7 +269,7 @@ async def send(websocket, stop=False):
 
             only_rotate = heading != robot.heading
             # print(f"{only_rotate} - {heading} - {robot.heading}")
-            if only_rotate and all(abs(r.heading-heading) < 0.025*pi for r, _ in robot.combined_robots):
+            if only_rotate and all(abs(r.heading-heading) % 2*pi < 0.025*pi for r, _ in robot.combined_robots):
                 if counter.heading_timer.stopped:
                     counter.heading_timer.reset()
                 elif counter.heading_timer.ns() > 100_000_000:
@@ -284,9 +282,8 @@ async def send(websocket, stop=False):
 
             # only_rotate = True
             for combined_robot, offset in robot.combined_robots:
-                print(f"Combined robot {combined_robot.name} heading: {combined_robot.heading} / {heading} - {abs(combined_robot.heading-heading)} < {0.025*pi}")
-                # expected_location = expected_location + offset  # .rotate(heading)
                 c_move = Move(move.line + offset, move.clearance, move.start_time, move.end_time)
+                # print(f"Combined robot {combined_robot.name} heading: {combined_robot.heading} / {heading} - {abs(combined_robot.heading - heading)} < {0.025 * pi}")
 
                 left, right = update_combined_speed_l_and_r(combined_robot, c_move, current_time, only_rotate)
                 data[combined_robot.name] = [left, right]
