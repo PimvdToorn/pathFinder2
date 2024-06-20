@@ -157,7 +157,12 @@ def path_around_robot(move: Move, r_move: Move, robot: Robot, field: Field, dept
     if r_move.waiting:
         # print("Robot waiting")
         wait_move = get_wait_move(move.start, move.clearance, move.start_time, int(r_move.end_time - move.start_time))
-        return get_possible_paths(wait_move, field, depth)
+        paths = get_possible_paths(wait_move, field, depth)
+        # print(f"Move: {move}")
+        # print(f"Wait move: {wait_move}")
+        # print(f"Paths: {paths}")
+        # input()
+        return paths
 
     clearance = move.clearance + r_move.clearance
     t_offset = (leg_from_base_and_lines(clearance, move.line, r_move.line) * 2) / r_move.speed
@@ -171,6 +176,12 @@ def path_around_robot(move: Move, r_move: Move, robot: Robot, field: Field, dept
     move_offset = t_offset - move_time_at_intersection + r_time_at_intersection + ROBOT_TO_ROBOT_MARGIN_NS
 
     if r_move == robot.path[-1] and move_time_at_intersection + t_offset + r_time_at_intersection > r_move.end_time:
+        # print(f"Hit at {line_intersection(move.line, r_move.line)}")
+        # print(f"Move time at intersection: {move_time_at_intersection}")
+        # print(f"Robot time at intersection: {r_time_at_intersection}")
+        # print(f"t offset: {t_offset}")
+        # print(f"Move offset: {move_offset}")
+        # input()
         wait_move = get_wait_move(move.start, move.clearance, move.start_time, int(r_move.end_time - move.start_time))
         wait_move = get_possible_paths(wait_move, field, depth)
         if wait_move:
@@ -192,15 +203,19 @@ def path_around_robot(move: Move, r_move: Move, robot: Robot, field: Field, dept
         # print(f"Move1: {move1}, Move2: {move2}")
         # print("Move 1:")
         path1 = get_possible_paths(move1, field, depth)
+        # if path1:
+            # print(f"1Robot successfully around, move: {move}, robot: {robot.name}, path: {steps_str(robot.path)}")
         # print("Move 2:")
         path2 = get_possible_paths(move2, field, depth)
+        # if path2:
+        #     print(f"2Robot successfully around, move: {move}, robot: {robot.name}, path: {steps_str(robot.path)}")
         paths = path1 + path2
         for path in paths:
             path.insert(0, wait_move)
         return paths
 
     wait_move = get_wait_move(move.start, move.clearance, move.start_time, int(move_offset))
-    # print(f"Wait move: {wait_move}")
+    # print(f"Wait move: {wait_move} - move: {move}, r_move: {r_move}, robot: {robot.name}")
     paths = get_possible_paths(wait_move, field, depth)
     # print(paths)
     return paths
@@ -245,7 +260,10 @@ def get_possible_paths(move: Move, field: Field, depth: int) -> list[list[Move]]
     if isinstance(c_object, Obstacle):
         return path_around_obstacle(move, c_object, c_element, field, depth)
     else:
-        return path_around_robot(move, c_element, c_object, field, depth)
+        paths = path_around_robot(move, c_element, c_object, field, depth)
+        # if paths:
+        #     print(f"Robot successfully around, move: {move}, robot: {c_object.name}, path: {steps_str(c_object.path)}")
+        return paths
 
 
 # Checks if steps can be skipped and if they're possible

@@ -90,6 +90,10 @@ class Line:
     def __str__(self):
         return f"L({self.p1}, {self.p2})"
 
+    def __add__(self, other: Point):
+        return Line(self.p1 + other, self.p2 + other)
+
+
     @property
     def len(self) -> float:
         if self._len is None:
