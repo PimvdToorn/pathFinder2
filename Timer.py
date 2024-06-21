@@ -5,21 +5,22 @@ class Timer:
     def __init__(self):
         self.start = time.time_ns()
         self.stop_time = 0
-        self.stopped = False
+
+    @property
+    def stopped(self):
+        return self.stop_time != 0
 
     def reset(self):
         self.start = time.time_ns()
         self.stop_time = 0
-        self.stopped = False
 
     def stop(self) -> int:
         self.stop_time = time.time_ns()
-        self.stopped = True
         return self.stop_time - self.start
 
     # Nanoseconds
     def ns(self) -> int:
-        if self.stop_time:
+        if self.stopped:
             return self.stop_time - self.start
         return time.time_ns() - self.start
 

@@ -12,7 +12,6 @@ from objects.Robot import Robot
 def set_path(destination: Point, robot: Robot, field: Field, time: int) -> None:
     robot.path = []
     move = robot.create_move(destination, time)
-    # remove_imp_outside_points(field, move.clearance)
     robot.path = pathfind(move, field)
 
 
@@ -22,8 +21,6 @@ def set_best_paths(destinations: list[Point], field: Field, time: int, verbose_r
     for robot in field.robots:
         if robot.destination:
             unavailable_robots.append(robot)
-        elif robot.combined_robots:
-            robots.insert(0, robot)
         else:
             robots.append(robot)
     field.robots = unavailable_robots + robots
@@ -36,8 +33,7 @@ def set_best_paths(destinations: list[Point], field: Field, time: int, verbose_r
     all_dest_orders = list(permutations(destinations))
     all_robot_orders = [p[:len(destinations)] for p in permutations(range(len(unavailable_robots), len(field.robots)))]
     all_robot_orders = remove_duplicates_ordered(all_robot_orders)
-    # print(all_dest_orders)
-    # print(all_robot_orders)
+
     total = len(all_dest_orders) * len(all_robot_orders)
 
     best_max_end_time = float('inf')
@@ -72,11 +68,10 @@ def set_best_paths(destinations: list[Point], field: Field, time: int, verbose_r
 
             max_end_time = 0.0
             for i, d in enumerate(dest_order):
-                # print("---------------------------------")
                 robot = field.robots[robot_order[i]]
                 # print(f"Robot {robot.name} to {d}")
                 robot.path = pathfind(robot.create_move(d, time), field)
-                # print(f"Robot {i + 1}: {steps_str(robot.path)}")
+
                 if robot.path:
                     max_end_time = max(max_end_time, robot.path[-1].end_time)
                 else:
@@ -85,8 +80,8 @@ def set_best_paths(destinations: list[Point], field: Field, time: int, verbose_r
                     bad_orders.append(robot_order[:i+1])
                     bad_dest_orders[dest_order[:i+1]] = bad_dest_orders.get(dest_order[:i+1], []) + [robot_order[:i+1]]
                     break
+
             if max_end_time < best_max_end_time:
-                # print(f"New best time: {max_end_time}")
                 best_max_end_time = max_end_time
                 best_paths = [robot.path for robot in field.robots]
 

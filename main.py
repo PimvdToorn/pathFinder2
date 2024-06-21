@@ -31,29 +31,30 @@ R2_ADDRESS = ""
 
 field = Field()
 field.add_obstacles([
+    Obstacle([P(0.05, 0.35), P(0.05, 0.85), P(0.55, 0.85), P(0.55, 0.35)]),
     # Obstacle([P(2, 1), P(2, 3), P(6, 4), P(4, 2), P(6, 0), P(4, 1)]),
     # Obstacle([P(9, 3), P(6, 6), P(7, 7)]),
     # Obstacle([P(5, 5), P(2, 5), P(1, 7), P(3, 9), P(10, 9), P(10, 8), P(3.5, 7.5), P(4, 6)])
 ])
 
 field.add_robots([
-    Robot("R1", R1_ADDRESS, CLEARANCE, P(2.450000, 2.410000)),
-    Robot("R2", R2_ADDRESS, CLEARANCE, P(2.370000, 2.670000)),
-    Robot("C1", "", CLEARANCE, P(-0.00000, 0.000259)),
-    Robot("C2", "", CLEARANCE, P(0.500000, 0.000259)),
-    Robot("C3", "", CLEARANCE, P(2.120000, 1.170259)),
-    Robot("C4", "", CLEARANCE, P(1.600000, 1.890268))
+    Robot("R1", R1_ADDRESS, CLEARANCE, P(2.450, 2.410)),
+    Robot("R2", R2_ADDRESS, CLEARANCE, P(2.280, 2.430)),
+    Robot("C1", "", CLEARANCE, P(-0.890, 0.490)),
+    Robot("C2", "", CLEARANCE, P(0.740, 1.190)),
+    Robot("C3", "", CLEARANCE, P(1.450, -0.270)),
+    Robot("C4", "", CLEARANCE, P(0.460, 1.370))
 ])
 
-set_best_paths([P(1, 0), P(1, 1), P(1, 2), P(2, 0), P(2, 1), P(2, 2)], field, 0, True, True)
+# set_best_paths([P(1, 0), P(1, 1), P(1, 2), P(2, 0), P(2, 1), P(2, 2)], field, 0, True, True)
 
-# set_best_paths([P(10, 20), P(20, 10), P(30, 40), P(40, 30), P(50, 60), P(60, 50)], field, 0, True, True)
+# set_best_paths([P(0, 0.2), P(0, -0.2), P(-0.2, 0), P(0.2, 0)], field, 0, True, True)
 
-# set_path(P(1, 0), field.robots[0], field, 0)
-# print(f"Robot {field.robots[0].name} path: {steps_str(field.robots[0].path)}")
-# # print("------------------------------------------------------------------------------------------------")
-# set_path(P(1, 1), field.robots[1], field, 0)
-# print(f"Robot {field.robots[1].name} path: {steps_str(field.robots[1].path)}")
+# set_path(P(0, 0.2), field.robots[4], field, 0)
+# print(f"Robot {field.robots[4].name} path: {steps_str(field.robots[4].path)}")
+# print("------------------------------------------------------------------------------------------------")
+# set_path(P(0, -0.2), field.robots[3], field, 0)
+# print(f"Robot {field.robots[3].name} path: {steps_str(field.robots[3].path)}")
 # set_path(P(1, 2), field.robots[2], field, 0)
 # print(f"Robot {field.robots[2].name} path: {steps_str(field.robots[2].path)}")
 # set_path(P(2, 0), field.robots[3], field, 0)
@@ -104,7 +105,6 @@ async def handler(websocket):
         print(f"----------------------------------------------------------------- {
             counter.get_count()} - {counter.get_time()}ms")
         for robot in field.robots:
-            # todo does this work?
             if robot.combined_robots:
                 locations = []
                 for r in robot.combined_robots:
@@ -123,7 +123,6 @@ async def handler(websocket):
                 rotation = -rotation[3] if rotation[2] > 0 else rotation[3]
                 robot.heading = rotation % (2 * pi)
 
-            # print(dict_message["rotation_" + robot.name])
             print(f"Robot {robot.name} location: {robot.location}, heading: {robot.heading}")
 
         if msvcrt.kbhit():
@@ -138,7 +137,6 @@ async def send(websocket, stop=False):
 
     data: dict[str, list[float]] = {r.name: [] for r in field.robots if not r.address}
     for robot in field.robots:
-        # print(f"Robot {robot.name} location: {robot.location}, heading: {robot.heading}")
         if stop:
             data[robot.name] = [0, 0]
 
@@ -153,26 +151,24 @@ async def send(websocket, stop=False):
                 continue
 
             heading = get_heading(move.line)
+            # If the new heading is only a small deviation from the current heading, first rotating is not necessary
             if abs(robot.heading - heading) < 0.025 * pi:
                 robot.heading = heading
 
             only_rotate = heading != robot.heading
-            # print(f"{only_rotate} - {heading} - {robot.heading}")
             if only_rotate and all(abs(r.heading-heading) % 2*pi < 0.025*pi for r, _ in robot.combined_robots):
                 if counter.heading_timer.stopped:
                     counter.heading_timer.reset()
+                # Only stop rotating if all robots have the correct heading for at least 0.1 seconds
                 elif counter.heading_timer.ns() > 100_000_000:
                     robot.heading = heading
-                    # input("Heading done")
                     only_rotate = False
                     counter.heading_timer.stop()
             elif not counter.heading_timer.stopped:
                 counter.heading_timer.stop()
 
-            # only_rotate = True
             for combined_robot, offset in robot.combined_robots:
                 c_move = Move(move.line + offset, move.clearance, move.start_time, move.end_time)
-                # print(f"Combined robot {combined_robot.name} heading: {combined_robot.heading} / {heading} - {abs(combined_robot.heading - heading)} < {0.025 * pi}")
 
                 left, right = update_combined_speed_l_and_r(combined_robot, c_move, current_time, only_rotate)
                 data[combined_robot.name] = [left, right]

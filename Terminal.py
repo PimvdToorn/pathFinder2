@@ -32,11 +32,11 @@ def float_input(prompt: str) -> float:
             print("Invalid input, should be a float")
 
 
-def select_robots(msg: str, field: Field, amount=None) -> list[Robot]:
+def select_robots(prompt: str, field: Field, amount=None) -> list[Robot]:
     available_robots = [r for r in field.robots if r.destination is None]
 
     if amount is None:
-        amount = int_input(msg, 0, len(available_robots))
+        amount = int_input(prompt, 0, len(available_robots))
     if amount == 0:
         return []
 
@@ -64,8 +64,14 @@ def command_input(field: Field, timer: Timer) -> None:
         case b'r':
             if input("Reset all robots? (y/n): ").lower() == "y":
                 for robot in field.robots:
+                    if robot.combined_robots:
+                        for r, _ in robot.combined_robots:
+                            field.robots.append(r)
+                        field.robots.remove(robot)
+
                     robot.path = []
                     robot.destination = None
+
                 print("Reset all robots========================================================================")
         case b'd':
             amount = int_input("Enter number of destinations: ", 0)

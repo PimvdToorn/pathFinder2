@@ -1,10 +1,8 @@
-from itertools import permutations
 from typing import Any
 
 from MathHelper import distance_point_to_line, line_intersection_t_u, line_intersection, distance, \
     get_tangent_points, get_closest_point, leg_from_base_and_lines, point_to_line_t, line_intersection_t, offset_line, \
     get_points_around_robot
-from Timer import Timer
 from Types import Point, Line
 from objects.Field import Field
 from objects.Move import Move, steps_str, min_distance, get_wait_move, remove_duplicates, path_str, path_in_paths
@@ -111,13 +109,16 @@ def first_robot_intersection(move: Move, robot: Robot) -> tuple[float, Move]:
 
 def path_around_obstacle(move: Move, obstacle: Obstacle, c_v_or_e: Point | Line, field: Field, depth: int) \
         -> list[list[Move]]:
+    if is_point_in_obstacle(move.end, obstacle, move.clearance):
+        return []
+
     if isinstance(c_v_or_e, Point):
         point = c_v_or_e
     else:
         point = get_closest_point(move.start, [c_v_or_e.p1, c_v_or_e.p2])
 
     o_point = obstacle[move.clearance].outside_points_dict[point]
-    # print(f"Around obstacle, move: {move}, point: {point}, o_point: {o_point}")
+    # print(f"Around obstacle, move: {move.__repr__()}, point: {point.__repr__()}, o_point: {o_point.__repr__()}")
 
     paths: list[list[Move]] = []
     # 0 is counterclockwise
@@ -139,8 +140,6 @@ def path_around_obstacle(move: Move, obstacle: Obstacle, c_v_or_e: Point | Line,
                 new_path[-1].end_time
             )
 
-        # Don't append last step, so other function will know to make new move and check with other obstacles
-        # new_path.append(move_to_dest)
         # print(f"New p ar obstacle r{rotation}: {steps_str(new_path)}")
         paths += reduce_path(new_path, field, depth)
         # new_path = reduce_path(new_path, field)
@@ -204,7 +203,7 @@ def path_around_robot(move: Move, r_move: Move, robot: Robot, field: Field, dept
         # print("Move 1:")
         path1 = get_possible_paths(move1, field, depth)
         # if path1:
-            # print(f"1Robot successfully around, move: {move}, robot: {robot.name}, path: {steps_str(robot.path)}")
+        #     print(f"1Robot successfully around, move: {move}, robot: {robot.name}, path: {steps_str(robot.path)}")
         # print("Move 2:")
         path2 = get_possible_paths(move2, field, depth)
         # if path2:
