@@ -1,6 +1,6 @@
 from math import pi
 
-from MathHelper import get_heading, distance, distance_point_to_line, distance2
+from MathHelper import get_heading, distance, distance_point_to_line
 from BestPaths import set_path
 from Types import Point, Line
 from objects.Field import Field

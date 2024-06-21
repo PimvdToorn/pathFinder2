@@ -7,7 +7,6 @@ from Types import Point
 from objects.Field import Field
 from objects.Move import steps_str, Move
 from objects.Robot import Robot
-from time import sleep
 
 
 def set_path(destination: Point, robot: Robot, field: Field, time: int) -> None:
@@ -48,44 +47,29 @@ def set_best_paths(destinations: list[Point], field: Field, time: int, verbose_r
     bad_dest_orders = {}
     for index, dest_order in enumerate(all_dest_orders):
         if verbose_progress:
-            # print()
             print(f"\rProgress: {index}/{len(all_dest_orders)} - {index * len(all_robot_orders)}/{total}", end="")
-            # input()
             timer_dest_order.reset()
 
-        # if index < 8:
-        #     continue
+        bad_orders = []
+        for b_order in bad_dest_orders:
+            if dest_order[:len(b_order)] == b_order:
+                bad_orders += bad_dest_orders[b_order]
 
-        # bad_orders = []
-        # for b_order in bad_dest_orders:
-        #     if dest_order[:len(b_order)] == b_order:
-        #         bad_orders += bad_dest_orders[b_order]
-
-        # orders_to_check = all_robot_orders todo remove known impossible orders
         for rindex, robot_order in enumerate(all_robot_orders):
-            # if rindex < 37:
-            #     continue
-
             # for robot in field.robots:
             #     print(f"Robot {robot.name} path: {steps_str(robot.path)}")
             # print("-----------------------------------------------------------------------------------------")
             # print(f"Destination order: {dest_order}")
             # print(f"Robot order {rindex+1}/{len(all_robot_orders)}: {robot_order}")
 
-            # is_bad_order = False
-            # for bad_order in bad_orders:
-            #     if bad_order == robot_order[:len(bad_order)]:
-            #         is_bad_order = True
-            #         # if index > 7:
-            #         #     input(f"Bad order: {bad_order}")
-            #         break
-            # if is_bad_order:
-            #     continue
+            is_bad_order = False
+            for bad_order in bad_orders:
+                if bad_order == robot_order[:len(bad_order)]:
+                    is_bad_order = True
+                    break
+            if is_bad_order:
+                continue
 
-            # if index > 7:
-            #     input()
-
-            # todo remove known impossible orders
             max_end_time = 0.0
             for i, d in enumerate(dest_order):
                 # print("---------------------------------")
@@ -98,11 +82,11 @@ def set_best_paths(destinations: list[Point], field: Field, time: int, verbose_r
                 else:
                     max_end_time = float('inf')
                 if max_end_time >= best_max_end_time:
-                    # bad_orders.append(robot_order[:i+1])
-                    # bad_dest_orders[dest_order[:i+1]] = bad_dest_orders.get(dest_order[:i+1], []) + [robot_order[:i+1]]
+                    bad_orders.append(robot_order[:i+1])
+                    bad_dest_orders[dest_order[:i+1]] = bad_dest_orders.get(dest_order[:i+1], []) + [robot_order[:i+1]]
                     break
             if max_end_time < best_max_end_time:
-                print(f"New best time: {max_end_time}")
+                # print(f"New best time: {max_end_time}")
                 best_max_end_time = max_end_time
                 best_paths = [robot.path for robot in field.robots]
 

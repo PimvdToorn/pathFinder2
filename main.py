@@ -3,7 +3,7 @@ import json
 import msvcrt
 import requests
 import time
-from math import pi, cos, sin
+from math import pi
 
 import websockets
 from orjson import orjson
@@ -11,6 +11,7 @@ from orjson import orjson
 from Controller import update_speed_l_and_r, get_expected_location_and_move, update_combined_speed_l_and_r
 from MathHelper import distance, get_heading
 from BestPaths import set_path, set_best_paths
+from Terminal import command_input
 from Timer import Timer
 from Types import L, P, Point
 from objects.Move import Move, steps_str, path_str
@@ -28,41 +29,41 @@ R1_ADDRESS = ""
 R2_ADDRESS = ""
 
 
-field = Field((3000, 3000))
+field = Field()
 field.add_obstacles([
     # Obstacle([P(2, 1), P(2, 3), P(6, 4), P(4, 2), P(6, 0), P(4, 1)]),
     # Obstacle([P(9, 3), P(6, 6), P(7, 7)]),
     # Obstacle([P(5, 5), P(2, 5), P(1, 7), P(3, 9), P(10, 9), P(10, 8), P(3.5, 7.5), P(4, 6)])
 ])
 
-field.add_robot(Robot("R1", R1_ADDRESS, CLEARANCE, P(2.450000, 2.410000)))
-field.add_robot(Robot("R2", R2_ADDRESS, CLEARANCE, P(2.370000, 2.430000)))
-field.add_robot(Robot("C1", "", CLEARANCE, P(-0.000000, 0.000259)))
-field.add_robot(Robot("C2", "", CLEARANCE, P(0.500000, 0.000259)))
-field.add_robot(Robot("C3", "", CLEARANCE, P(2.120000, 1.170259)))
-field.add_robot(Robot("C4", "", CLEARANCE, P(1.600000, 1.890268)))
+field.add_robots([
+    Robot("R1", R1_ADDRESS, CLEARANCE, P(2.450000, 2.410000)),
+    Robot("R2", R2_ADDRESS, CLEARANCE, P(2.370000, 2.670000)),
+    Robot("C1", "", CLEARANCE, P(-0.00000, 0.000259)),
+    Robot("C2", "", CLEARANCE, P(0.500000, 0.000259)),
+    Robot("C3", "", CLEARANCE, P(2.120000, 1.170259)),
+    Robot("C4", "", CLEARANCE, P(1.600000, 1.890268))
+])
 
-# set_best_paths([P(1, 0), P(1, 1), P(1, 2), P(2, 0), P(2, 1), P(2, 2)], field, 0, True, True)
-# set_best_paths([P(1, 0), P(1, 1), P(1, 2), P(2, 1), P(2, 2)], field, 0, True, True)
-# set_best_paths([P(1, 0), P(1, 1), P(1, 2), P(2, 0)], field, 0, True, True)
+set_best_paths([P(1, 0), P(1, 1), P(1, 2), P(2, 0), P(2, 1), P(2, 2)], field, 0, True, True)
 
-# field.add_robot(Robot("R1", R1_ADDRESS, CLEARANCE, P(10, 10)))
-# field.add_robot(Robot("R2", R2_ADDRESS, CLEARANCE, P(20, 20)))
-# field.add_robot(Robot("C1", "", CLEARANCE, P(30, 30)))
-# field.add_robot(Robot("C2", "", CLEARANCE, P(40, 40)))
-# field.add_robot(Robot("C3", "", CLEARANCE, P(50, 50)))
-# field.add_robot(Robot("C4", "", CLEARANCE, P(60, 60)))
-#
 # set_best_paths([P(10, 20), P(20, 10), P(30, 40), P(40, 30), P(50, 60), P(60, 50)], field, 0, True, True)
 
+# set_path(P(1, 0), field.robots[0], field, 0)
+# print(f"Robot {field.robots[0].name} path: {steps_str(field.robots[0].path)}")
+# # print("------------------------------------------------------------------------------------------------")
+# set_path(P(1, 1), field.robots[1], field, 0)
+# print(f"Robot {field.robots[1].name} path: {steps_str(field.robots[1].path)}")
+# set_path(P(1, 2), field.robots[2], field, 0)
+# print(f"Robot {field.robots[2].name} path: {steps_str(field.robots[2].path)}")
+# set_path(P(2, 0), field.robots[3], field, 0)
+# print(f"Robot {field.robots[3].name} path: {steps_str(field.robots[3].path)}")
+# set_path(P(2, 1), field.robots[4], field, 0)
+# print(f"Robot {field.robots[4].name} path: {steps_str(field.robots[4].path)}")
+# set_path(P(2, 2), field.robots[5], field, 0)
+# print(f"Robot {field.robots[5].name} path: {steps_str(field.robots[5].path)}")
 # exit()
-# set_path(P(0, 10), field.robots[0], field, 0)
-# set_path(P(1, 10), field.robots[1], field, 0)
-# set_path(P(0, 2), field.robots[2], field, 0)
-# set_path(P(0.5, 2), field.robots[3], field, 0)
-# set_path(P(1, 2), field.robots[4], field, 0)
-# set_path(P(1.5, 2), field.robots[5], field, 0)
-print("Done calculating paths")
+# print("Done calculating paths")
 
 
 class FrameCounter:
@@ -86,118 +87,6 @@ class FrameCounter:
 
 counter = FrameCounter()
 timer = Timer()
-
-
-def int_input(prompt: str, minimum=None, maximum=None) -> int:
-    while True:
-        try:
-            number = int(input(prompt))
-        except ValueError:
-            print("Invalid input, should be an integer")
-            continue
-        if minimum is not None and number < minimum:
-            print(f"Invalid input, should be at least {minimum}")
-            continue
-        if maximum is not None and number > maximum:
-            print(f"Invalid input, should be at most {maximum}")
-            continue
-        return number
-
-
-def float_input(prompt: str) -> float:
-    while True:
-        try:
-            return float(input(prompt))
-        except ValueError:
-            print("Invalid input, should be a float")
-
-
-def select_robots(msg: str, amount=None) -> list[Robot]:
-    available_robots = [r for r in field.robots if r.destination is None]
-
-    if amount is None:
-        amount = int_input(msg, 0, len(available_robots))
-    if amount == 0:
-        return []
-
-    for i, robot in enumerate(available_robots):
-        print(f"{i + 1} - {robot.name}: {robot.location.bare_str()}")
-
-    used_robot_numbers = []
-    for i in range(amount):
-        while True:
-            robot_number = int_input(f"Enter robot number {i + 1}: ", 1, len(available_robots))
-            if robot_number in used_robot_numbers:
-                print("Robot already used")
-                continue
-            used_robot_numbers.append(robot_number)
-            break
-
-    return [available_robots[i - 1] for i in used_robot_numbers]
-
-
-def command_input():
-    # for robot in field.robots:
-    #     _ = asyncio.create_task(send_robot_update(robot, 0.0, 0.0))
-    char = msvcrt.getch()
-    match char:
-        case b'q':
-            exit()
-        case b'r':
-            if input("Reset all robots? (y/n): ").lower() == "y":
-                for robot in field.robots:
-                    robot.path = []
-                    robot.destination = None
-                print("Reset all robots========================================================================")
-        case b'd':
-            amount = int_input("Enter number of destinations: ", 0)
-            if amount == 0:
-                return
-
-            destinations = []
-            if input("Select specific robots? (y/n): ").lower() == "y":
-                used_robots = select_robots("", amount)
-
-                for r in used_robots:
-                    x = float_input(f"Enter x position for destination {r.name}: ")
-                    y = float_input(f"Enter y position for destination {r.name}: ")
-                    destinations.append(P(x, y))
-                for i, r in enumerate(used_robots):
-                    set_path(destinations[i], r, field, timer.ns())
-            else:
-                for i in range(amount):
-                    x = float_input(f"Enter x position for destination {i + 1}: ")
-                    y = float_input(f"Enter y position for destination {i + 1}: ")
-                    destinations.append(P(x, y))
-                set_best_paths(destinations, field, timer.ns(), True, True)
-            print("Done calculating paths====================================================================")
-
-        case b'c':
-            used_robots = select_robots("Enter number of robots in combined bot: ")
-            amount = len(used_robots)
-            if amount == 0:
-                return
-
-            x = float_input(f"Enter x position for the destination: ")
-            y = float_input(f"Enter y position for the destination: ")
-            destination = P(x, y)
-
-            average_position = sum([r.location for r in used_robots], start=Point(0, 0)) / amount
-            distances = {distance(r.location, average_position): r for r in used_robots}
-            furthest_distance = max(d for d in distances)
-            combined_robot = Robot(
-                "Combined",
-                "",
-                furthest_distance + distances[furthest_distance].radius,
-                average_position
-            )
-            for robot in used_robots:
-                combined_robot.combined_robots.append((robot, robot.location - average_position))
-                field.robots.remove(robot)
-            field.robots.append(combined_robot)
-
-            set_path(destination, combined_robot, field, timer.ns())
-            combined_robot.heading = -1
 
 
 async def handler(websocket):
@@ -239,7 +128,7 @@ async def handler(websocket):
 
         if msvcrt.kbhit():
             _ = await asyncio.create_task(send(websocket, True))
-            command_input()
+            command_input(field, timer)
         else:
             _ = asyncio.create_task(send(websocket))
 
