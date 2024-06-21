@@ -98,3 +98,10 @@ class Obstacle:
         return self.clearance_points[item]
 
 
+def get_box(center: Point, x_width: float, y_width: float) -> Obstacle:
+    return Obstacle([
+        P(center.x - x_width / 2, center.y - y_width / 2),
+        P(center.x - x_width / 2, center.y + y_width / 2),
+        P(center.x + x_width / 2, center.y + y_width / 2),
+        P(center.x + x_width / 2, center.y - y_width / 2),
+    ])

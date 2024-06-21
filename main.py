@@ -16,7 +16,7 @@ from Timer import Timer
 from Types import L, P, Point
 from objects.Move import Move, steps_str, path_str
 from objects.Field import Field
-from objects.Obstacle import Obstacle
+from objects.Obstacle import Obstacle, get_box
 from objects.Robot import Robot
 
 CLEARANCE = 0.08
@@ -31,7 +31,7 @@ R2_ADDRESS = ""
 
 field = Field()
 field.add_obstacles([
-    Obstacle([P(0.05, 0.35), P(0.05, 0.85), P(0.55, 0.85), P(0.55, 0.35)]),
+    get_box(P(0.3, 0.6), 0.5, 0.5),
     # Obstacle([P(2, 1), P(2, 3), P(6, 4), P(4, 2), P(6, 0), P(4, 1)]),
     # Obstacle([P(9, 3), P(6, 6), P(7, 7)]),
     # Obstacle([P(5, 5), P(2, 5), P(1, 7), P(3, 9), P(10, 9), P(10, 8), P(3.5, 7.5), P(4, 6)])
