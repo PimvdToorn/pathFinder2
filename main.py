@@ -31,7 +31,8 @@ R2_ADDRESS = ""
 
 field = Field()
 field.add_obstacles([
-    get_box(P(0.3, 0.6), 0.5, 0.5),
+    get_box(P(0.0, 0.6), 0.5, 0.5),
+    get_box(P(1.2, 1.4), 0.5, 0.5)
     # Obstacle([P(2, 1), P(2, 3), P(6, 4), P(4, 2), P(6, 0), P(4, 1)]),
     # Obstacle([P(9, 3), P(6, 6), P(7, 7)]),
     # Obstacle([P(5, 5), P(2, 5), P(1, 7), P(3, 9), P(10, 9), P(10, 8), P(3.5, 7.5), P(4, 6)])
@@ -48,22 +49,26 @@ field.add_robots([
 
 # set_best_paths([P(1, 0), P(1, 1), P(1, 2), P(2, 0), P(2, 1), P(2, 2)], field, 0, True, True)
 
-# set_best_paths([P(0, 0.2), P(0, -0.2), P(-0.2, 0), P(0.2, 0)], field, 0, True, True)
+set_best_paths([P(0, 0.2), P(0, -0.2), P(-0.2, 0), P(0.2, 0)], field, 0, True, True)
 
-# set_path(P(0, 0.2), field.robots[4], field, 0)
-# print(f"Robot {field.robots[4].name} path: {steps_str(field.robots[4].path)}")
+# r = field.robots[2]
+# set_path(P(0, 0.2), r, field, 0)
+# print(f"Robot {r.name} path: {steps_str(r.path)}")
 # print("------------------------------------------------------------------------------------------------")
-# set_path(P(0, -0.2), field.robots[3], field, 0)
-# print(f"Robot {field.robots[3].name} path: {steps_str(field.robots[3].path)}")
-# set_path(P(1, 2), field.robots[2], field, 0)
-# print(f"Robot {field.robots[2].name} path: {steps_str(field.robots[2].path)}")
-# set_path(P(2, 0), field.robots[3], field, 0)
-# print(f"Robot {field.robots[3].name} path: {steps_str(field.robots[3].path)}")
+# r = field.robots[4]
+# set_path(P(0, -0.2), r, field, 0)
+# print(f"Robot {r.name} path: {steps_str(r.path)}")
+# r = field.robots[3]
+# set_path(P(0.2, 0.0), r, field, 0)
+# print(f"Robot {r.name} path: {steps_str(r.path)}")
+# r = field.robots[5]
+# set_path(P(-0.2, 0.0), r, field, 0)
+# print(f"Robot {r.name} path: {steps_str(r.path)}")
 # set_path(P(2, 1), field.robots[4], field, 0)
 # print(f"Robot {field.robots[4].name} path: {steps_str(field.robots[4].path)}")
 # set_path(P(2, 2), field.robots[5], field, 0)
 # print(f"Robot {field.robots[5].name} path: {steps_str(field.robots[5].path)}")
-# exit()
+exit()
 # print("Done calculating paths")
 
 
