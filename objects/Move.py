@@ -36,7 +36,7 @@ class Move:
         self.y_max = max(self.y1, self.y2) + clearance
 
     def __repr__(self) -> str:
-        return f"Move({self.start_time}, {self.end_time}, {self.start.__repr__()}, {self.end.__repr__()})"
+        return f"Move({self.start_time/1000000000:.3f}, {self.end_time/1000000000:.3f}, {self.start.__repr__()}, {self.end.__repr__()})"
 
     def __str__(self) -> str:
         return f"Move({self.start_time/1000000000:.1f}-{self.end_time/1000000000:.1f}s, {self.start}, {self.end})"
@@ -81,7 +81,7 @@ def path_str(moves: list[Move]) -> str:
     string = '['
     for move in moves:
         string += move.__str__() + ', '
-    return string + ']'
+    return string[:-2] + ']'
 
 
 def path_in_paths(path: list[Move], paths: list[list[Move]]) -> bool:
@@ -112,8 +112,14 @@ def min_distance(m1: Move, m2: Move) -> tuple[float, float]:
             return distance(m1.start, m2.start), m1.start_time
         waiting = m1 if m1.waiting else m2
         moving = m1 if not m1.waiting else m2
+
         t = point_to_line_t(waiting.start, moving.line)
-        t = max(0.0, min(1.0, t))
+        max_t = (waiting.end_time - moving.start_time) / (moving.end_time - moving.start_time)
+        # print(f"t: {t}, max_t: {max_t}")
+        # if max_t < 0 or max_t > 1:
+        #     input(f"max_t < 0: {max_t}")
+        max_t = max(0.0, min(1.0, max_t))
+        t = max(0.0, min(max_t, t))
         return (distance(waiting.start, moving.line.location_at_t(t)),
                 moving.start_time + t * moving.line.len / moving.speed)
 

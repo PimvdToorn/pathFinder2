@@ -47,9 +47,9 @@ field.add_robots([
     Robot("C4", "", CLEARANCE, P(0.460, 1.370))
 ])
 
-# set_best_paths([P(1, 0), P(1, 1), P(1, 2), P(2, 0), P(2, 1), P(2, 2)], field, 0, True, True)
+set_best_paths([P(1, 0), P(1, 1), P(1, 2), P(2, 0), P(2, 1), P(2, 2)], field, 0, True, True)
 
-set_best_paths([P(0, 0.2), P(0, -0.2), P(-0.2, 0), P(0.2, 0)], field, 0, True, True)
+# set_best_paths([P(0, 0.2), P(0, -0.2), P(-0.2, 0), P(0.2, 0)], field, 0, True, True)
 
 # r = field.robots[2]
 # set_path(P(0, 0.2), r, field, 0)

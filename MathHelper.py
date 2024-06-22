@@ -112,6 +112,30 @@ def get_tangent_points(p: Point, c: Point, radius: float) -> tuple[Point, Point]
     return x1, x2
 
 
+def get_closest_to_vertex(p1: Point, p2: Point, v: Point, op: Point, clearance: float) -> Point:
+    # clearance = clearance + 0.0001
+    tps1 = get_tangent_points(p1, v, clearance)
+    tps2 = get_tangent_points(p2, v, clearance)
+
+    # Take the outermost tangent point
+    tp1 = get_closest_point(op, tps1)
+    tp2 = get_closest_point(op, tps2)
+
+    return line_intersection(Line(p1, tp1), Line(p2, tp2))
+
+
+def get_point_to_vertex_tangent(p: Point, v: Point, op: Point, clearance: float) -> Line:
+    tps = get_tangent_points(p, v, clearance)
+    tp = get_closest_point(op, tps)
+    return Line(p, tp)
+
+
+def get_vertex_to_vertex_tangent(v1: Point, v2: Point, op: Point, clearance: float) -> Line:
+    line_v_to_v = Line(v1, v2)
+    # todo indirect and direct common tangents
+    return offset_line(line_v_to_v, clearance)
+
+
 def get_points_around_robot(p1: Point, p2: Point, rp: Point, clearance: float) -> tuple[Point, Point]:
     clearance = clearance + 0.0001
     tps1 = get_tangent_points(p1, rp, clearance)
