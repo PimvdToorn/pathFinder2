@@ -10,6 +10,7 @@ from orjson import orjson
 from Controller import update_speed_l_and_r, get_expected_location_and_move, update_combined_speed_l_and_r
 from MathHelper import distance, get_heading
 from BestPaths import set_path, set_best_paths
+from PathFinder import get_possible_paths
 from Terminal import command_input
 from Timer import Timer
 from Types import L, P, Point
@@ -31,7 +32,8 @@ R2_ADDRESS = ""
 field = Field()
 field.add_obstacles([
     get_box(P(0.0, 0.6), 0.5, 0.5),
-    get_box(P(1.2, 1.4), 0.5, 0.5)
+    get_box(P(1.2, 1.4), 0.5, 0.5),
+    # Obstacle([P(0.4, 1), P(0.4, 1.2), P(0.9, 0.9), P(0.9, 0.75), P(1.75, 0.75), P(1.5, 0.2), P(0.8, 0.3)])
     # Obstacle([P(2, 1), P(2, 3), P(6, 4), P(4, 2), P(6, 0), P(4, 1)]),
     # Obstacle([P(9, 3), P(6, 6), P(7, 7)]),
     # Obstacle([P(5, 5), P(2, 5), P(1, 7), P(3, 9), P(10, 9), P(10, 8), P(3.5, 7.5), P(4, 6)])
@@ -46,8 +48,16 @@ field.add_robots([
     Robot("C4", "", CLEARANCE, P(0.460, 1.370))
 ])
 
+# print(get_possible_paths(Move(L(P(0.869900, 1.069900), P(0.869900, 1.069900)), CLEARANCE, 0), field, 0))
+# input()
 # set_best_paths([P(1, 0), P(1, 1), P(1, 2), P(2, 0), P(2, 1), P(2, 2)], field, 0, True, True)
-
+# for r in field.robots:
+#     r.path = []
+#     r.destination = None
+# set_best_paths([P(0.5, 0.5), P(-0.5, 0.5), P(0.75, 1.5), P(1, 1.75), P(1.25, 1.75), P(-0.5, 0.2)], field, 0, True, True)
+# for r in field.robots:
+#     r.path = []
+#     r.destination = None
 # set_best_paths([P(0, 0.2), P(0, -0.2), P(-0.2, 0), P(0.2, 0)], field, 0, True, True)
 
 # r = field.robots[2]
@@ -105,7 +115,6 @@ async def handler(websocket):
 
         dict_message = orjson.loads(message)
 
-        # print(dict_message)
         print(f"----------------------------------------------------------------- {
             counter.get_count()} - {counter.get_time()}ms")
         for robot in field.robots:
@@ -114,6 +123,7 @@ async def handler(websocket):
                 for r in robot.combined_robots:
                     r[0].location = P(*dict_message["position_" + r[0].name])
 
+                    # Rotation comes as an axis-angle representation
                     rotation = dict_message["rotation_" + r[0].name]
                     rotation = -rotation[3] if rotation[2] > 0 else rotation[3]
                     r[0].heading = rotation % (2 * pi)
@@ -177,13 +187,13 @@ async def send(websocket, stop=False):
                 left, right = update_combined_speed_l_and_r(combined_robot, c_move, current_time, only_rotate)
                 data[combined_robot.name] = [left, right]
                 print(f"Robot {combined_robot.name} speeds: {left}, {right}")
+
                 if robot.address:
                     _ = asyncio.create_task(send_robot_update(robot, left, right))
         else:
             left, right = update_speed_l_and_r(robot, timer.ns(), field)
             data[robot.name] = [left, right]
             print(f"Robot {robot.name} speeds: {left}, {right}")
-        # print(f"Robot {robot.name} destination: {robot.destination}")
 
             if robot.address:
                 _ = asyncio.create_task(send_robot_update(robot, left, right))
@@ -202,7 +212,6 @@ async def send_robot_update(robot: Robot, left: float, right: float):
             "left_motor_speed": f"{left:.1f}",
             "right_motor_speed": f"{right:.1f}"
         })
-        # print(f"Sent data to {robot.name}: left_motor_speed: {left}, right_motor_speed: {right}")
         if response.status_code != 200:
             print(f"Error sending data to {robot.name}: {response.status_code}")
     except requests.ConnectionError as e:
