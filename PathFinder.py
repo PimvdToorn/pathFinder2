@@ -239,7 +239,6 @@ def path_around_robot(move: Move, r_move: Move, robot: Robot, field: Field, dept
 def get_possible_paths(move: Move, field: Field, depth: int) -> list[list[Move]]:
     depth += 1
     if depth > MAX_DEPTH:
-        print("|" * depth + f"Max depth reached: {move.__repr__()}")
         return []
 
     # Closest object

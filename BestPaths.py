@@ -43,9 +43,7 @@ def set_best_paths(destinations: list[Point], field: Field, time: int, verbose_r
     bad_dest_orders = {}
     for index, dest_order in enumerate(all_dest_orders):
         if verbose_progress:
-            print(f"\rProgress: {index}/{len(all_dest_orders)} - {index * len(all_robot_orders)}/{total}", end="")
-            # if index > 0:
-            #     input()
+            print(f"\rProgress: {index+1}/{len(all_dest_orders)} - {index * len(all_robot_orders)}/{total}", end="")
             timer_dest_order.reset()
 
         bad_orders = []
@@ -59,21 +57,13 @@ def set_best_paths(destinations: list[Point], field: Field, time: int, verbose_r
             for bad_order in bad_orders:
                 if bad_order == robot_order[:len(bad_order)]:
                     is_bad_order = True
-                    # print(f"Bad order: {bad_order}")
                     break
             if is_bad_order:
                 continue
 
-            # if index > 0 and rindex > 163:
-            #     print("-----------------------------------------------------------------------------------------")
-            #     print(f"Destination order: {dest_order}")
-            #     print(f"Robot order {rindex + 1}/{len(all_robot_orders)}: {robot_order}")
-            #     input()
-
             max_end_time = 0.0
             for i, d in enumerate(dest_order):
                 robot = field.robots[robot_order[i]]
-                # print(f"Robot {robot.name} to {d}")
                 robot.path = pathfind(robot.create_move(d, time), field)
 
                 if robot.path:

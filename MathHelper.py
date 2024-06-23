@@ -25,9 +25,13 @@ def distance_point_to_line(point: Point, line: Line) -> float:
     # Positive is left of the line, negative to the right
     a2 = (line.x2 - line.x1) * (point.y - line.y1) - (point.x - line.x1) * (line.y2 - line.y1)
     b = distance(line.p1, line.p2)
-    return a2 / b
+    try:
+        return a2 / b
+    except ZeroDivisionError:
+        return distance(point, line.p1)
 
 
+# t and u indicate how far along the lines the intersection is, 0 at the start, 1 at the end
 def line_intersection_t_u(l1: Line, l2: Line) -> tuple[float, float]:
     # https://en.wikipedia.org/wiki/Line%E2%80%93line_intersection#:~:text=denominator%20is%20zero.-,Given%20two%20points%20on%20each%20line%20segment,-%5Bedit%5D
     divider = (l1.x1 - l1.x2) * (l2.y1 - l2.y2) - (l1.y1 - l1.y2) * (l2.x1 - l2.x2)
@@ -52,27 +56,19 @@ def line_intersection(l1: Line, l2: Line) -> Point:
     return Point(l1.x1 + t * (l1.x2 - l1.x1), l1.y1 + t * (l1.y2 - l1.y1))
 
 
-# def get_slope(line: Line) -> float:
-#     try:
-#         return (line.y2 - line.y1) / (line.x2 - line.x1)
-#     except ZeroDivisionError:
-#         return float('inf')
+def hit_coords_point_to_line(p: Point, line: Line) -> Point:
+    if line.slope_inv == float('inf'):
+        # Slope is 0, so same x as p and same y as line
+        return Point(p.x, line.y1)
 
+    p_line = Line(p, Point(p.x + 1, p.y + line.slope_inv))
+    t = line_intersection_t(p_line, line)
 
-# def hit_coords_point_to_line(p: Point, line: Line) -> Point:
-#     if line.slope_inv == float('inf'):
-#         # Slope is 0, so same x as p and same y as line
-#         return Point(p.x, line.y1)
-#
-#     p_line = Line(p, Point(p.x + 1, p.y + line.slope_inv))
-#     t = line_intersection_t(p_line, line)
-#
-#     return Point(p.x + t, p.y + t * line.slope_inv)
+    return Point(p.x + t, p.y + t * line.slope_inv)
 
 
 def point_to_line_t(p: Point, line: Line) -> float:
     if line.slope_inv == float('inf'):
-        # Slope is 0, so p.x as a part (percentage) from x1 to x2
         return (p.x - line.x1) / (line.x2 - line.x1)
 
     p_line = Line(p, Point(p.x + 1, p.y + line.slope_inv))
@@ -140,12 +136,10 @@ def get_points_around_robot(p1: Point, p2: Point, rp: Point, clearance: float) -
     clearance = clearance + 0.0001
     tps1 = get_tangent_points(p1, rp, clearance)
     tps2 = get_tangent_points(p2, rp, clearance)
-    # print(f"    tps1: {tps1}, tps2: {tps2}")
 
     # Take the outermost tangent point
     paired_tps1 = tps1[0], get_closest_point(tps1[0], tps2)
     paired_tps2 = tps1[1], get_closest_point(tps1[1], tps2)
-    # print(f"    paired_tps1: {paired_tps1}, paired_tps2: {paired_tps2}")
 
     return line_intersection(Line(p1, paired_tps1[0]), Line(p2, paired_tps1[1])), \
         line_intersection(Line(p1, paired_tps2[0]), Line(p2, paired_tps2[1]))

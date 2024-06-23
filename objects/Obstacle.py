@@ -23,10 +23,6 @@ class ClearancePoints:
 
             self.outside_points_dict[vertex] = line_intersection(ol1, ol2)
 
-        # for op in self.outside_points_dict.values():
-        #     print(f"{op.bare_str()},", end="")
-        # print()
-
         self.outside_to_outside_points = {
             self.outside_points_dict[v]: [
                 self.outside_points_dict[connected_vertices[v][0]],
@@ -80,16 +76,6 @@ class Obstacle:
             ) < 1
             for v in self.vertices
         }
-
-        # for v, a in self.is_acute.items():
-        #     print("-----------------------------------")
-        #     print(f"intersection: {hit_coords_point_to_line(self.connected_vertices[v][0], Line(self.connected_vertices[v][1], v))}")
-        #     print(f"t: {point_to_line_t(
-        #         self.connected_vertices[v][0],
-        #         Line(self.connected_vertices[v][1], v)
-        #     )}")
-        #     print(f"Connected vertices: {self.connected_vertices[v]}")
-        #     print(f"{v}: {a}")
 
     def __getitem__(self, item: float) -> ClearancePoints:
         if item not in self.clearance_points:

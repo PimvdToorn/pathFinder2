@@ -29,8 +29,6 @@ def update_speed_l_and_r(r: Robot, time: int, field: Field) -> tuple[float, floa
 
     expected_location = r.get_expected_location(time)
     distance_from_expected = distance(expected_location, r.location)
-    # print(f"{r.name} location: {r.location.bare_str()}, Expected location: {expected_location.bare_str()}, "
-    #       f"Distance from expected: {distance_from_expected}")
 
     if distance_from_expected > MAX_DEVIATION:
         print(f"{r.name} has deviated too far from its path. Recalculating path.")
@@ -48,8 +46,6 @@ def update_speed_l_and_r(r: Robot, time: int, field: Field) -> tuple[float, floa
         r.destination = None
         r.path = []
         return 0.0, 0.0
-    elif move == r.path[-1]:
-        print(f"{r.name} distance: {distance(r.location, r.destination)}")
 
     if move is None:
         move = Move(Line(r.location, r.destination), r.radius, time)

@@ -20,10 +20,7 @@ class Move:
             if self.speed == 0.0:
                 self.end_time = start_time
             else:
-                try:
-                    self.end_time = start_time + ceil(line.len/self.speed)
-                except ValueError:
-                    input(f"Move: {line}, len: {line.len}, {self.speed}")
+                self.end_time = start_time + ceil(line.len/self.speed)
         else:
             self.end_time = end_time
 
@@ -115,9 +112,7 @@ def min_distance2(m1: Move, m2: Move) -> tuple[float, float]:
 
         t = point_to_line_t(waiting.start, moving.line)
         max_t = (waiting.end_time - moving.start_time) / (moving.end_time - moving.start_time)
-        # print(f"t: {t}, max_t: {max_t}")
-        # if max_t < 0 or max_t > 1:
-        #     input(f"max_t < 0: {max_t}")
+
         max_t = max(0.0, min(1.0, max_t))
         t = max(0.0, min(max_t, t))
         return (distance2(waiting.start, moving.line.location_at_t(t)),
