@@ -1,11 +1,11 @@
 from math import ceil
 
-from MathHelper import line_intersection_t_u, distance, point_to_line_t
+from MathHelper import line_intersection_t_u, distance, point_to_line_t, distance2
 from Types import Line, Point
 
 
 class Move:
-    def __init__(self, line: Line, clearance: float, start_time: int = 0, end_time: int = 0):  # , speed: float = 0.001):
+    def __init__(self, line: Line, clearance: float, start_time: int = 0, end_time: int = 0):
         self.waiting = line.len == 0
         self.x1 = line.x1
         self.y1 = line.y1
@@ -13,9 +13,7 @@ class Move:
         self.y2 = line.y2
         self.line = line
         self.start_time = start_time
-        # self.speed = speed
-        # self.speed = 0.000_000_00024
-        self.speed = 0.000_000_00008
+        self.speed = 0.000_000_00024
         if line.len == 0:
             self.speed = 0.0
         if end_time == 0:
@@ -78,6 +76,8 @@ def steps_str(moves: list[Move]) -> str:
 
 
 def path_str(moves: list[Move]) -> str:
+    if not moves:
+        return '[]'
     string = '['
     for move in moves:
         string += move.__str__() + ', '
@@ -106,10 +106,10 @@ def remove_duplicates(paths: list[list[Move]]) -> list[list[Move]]:
     return unique
 
 
-def min_distance(m1: Move, m2: Move) -> tuple[float, float]:
+def min_distance2(m1: Move, m2: Move) -> tuple[float, float]:
     if m1.waiting or m2.waiting:
         if m1.waiting and m2.waiting:
-            return distance(m1.start, m2.start), m1.start_time
+            return distance2(m1.start, m2.start), m1.start_time
         waiting = m1 if m1.waiting else m2
         moving = m1 if not m1.waiting else m2
 
@@ -120,7 +120,7 @@ def min_distance(m1: Move, m2: Move) -> tuple[float, float]:
         #     input(f"max_t < 0: {max_t}")
         max_t = max(0.0, min(1.0, max_t))
         t = max(0.0, min(max_t, t))
-        return (distance(waiting.start, moving.line.location_at_t(t)),
+        return (distance2(waiting.start, moving.line.location_at_t(t)),
                 moving.start_time + t * moving.line.len / moving.speed)
 
     t, u = line_intersection_t_u(m1.line, m2.line)
@@ -134,4 +134,4 @@ def min_distance(m1: Move, m2: Move) -> tuple[float, float]:
 
     p1 = m1.location_at_time(t_avg)
     p2 = m2.location_at_time(t_avg)
-    return distance(p1, p2), t_avg
+    return distance2(p1, p2), t_avg

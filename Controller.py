@@ -24,6 +24,8 @@ def update_speed_l_and_r(r: Robot, time: int, field: Field) -> tuple[float, floa
 
     if not r.path:
         set_path(r.destination, r, field, time)
+        if not r.path:
+            return 0.0, 0.0
 
     expected_location = r.get_expected_location(time)
     distance_from_expected = distance(expected_location, r.location)
@@ -33,6 +35,8 @@ def update_speed_l_and_r(r: Robot, time: int, field: Field) -> tuple[float, floa
     if distance_from_expected > MAX_DEVIATION:
         print(f"{r.name} has deviated too far from its path. Recalculating path.")
         set_path(r.destination, r, field, time)
+        if not r.path:
+            return 0.0, 0.0
         print(f"New path: {path_str(r.path)}")
         expected_location = r.get_expected_location(time)
         distance_from_expected = distance(expected_location, r.location)
@@ -44,6 +48,8 @@ def update_speed_l_and_r(r: Robot, time: int, field: Field) -> tuple[float, floa
         r.destination = None
         r.path = []
         return 0.0, 0.0
+    elif move == r.path[-1]:
+        print(f"{r.name} distance: {distance(r.location, r.destination)}")
 
     if move is None:
         move = Move(Line(r.location, r.destination), r.radius, time)
@@ -71,10 +77,15 @@ def update_speed_l_and_r(r: Robot, time: int, field: Field) -> tuple[float, floa
     dest_distance_diff = dest_distance - distance(expected_location, move.end)
 
     speed_deviation = SPEED_DEVIATION * (dest_distance_diff / MAX_DEVIATION)
-    # Slows down when close to the destination
-    speed = (SPEED + speed_deviation) * min(1.0, max(0.1, dest_distance*10))
-    # Rotation goes up when close to the destination
-    rotation_deviation = turning_speed / min(1.0, max(0.5, dest_distance*10))
+
+    if move == r.path[-1]:
+        # Slows down when close to the destination
+        speed = (SPEED + speed_deviation) * min(1.0, max(0.1, dest_distance*5))
+        # Rotation goes up when close to the destination
+        rotation_deviation = turning_speed / min(1.0, max(0.25, dest_distance*10))
+    else:
+        speed = (SPEED + speed_deviation) * min(1.0, max(0.5, dest_distance * 20))
+        rotation_deviation = turning_speed  # / min(1.0, max(0.5, dest_distance * 20))
 
     return (min(1.0, max(-1.0, speed + rotation_deviation)) * SPEED_LIMITER,
             min(1.0, max(-1.0, speed - rotation_deviation)) * SPEED_LIMITER)

@@ -5,7 +5,7 @@ from MathHelper import distance_point_to_line, line_intersection_t_u, distance, 
     get_point_to_vertex_tangent, get_closest_to_vertex
 from Types import Point, Line
 from objects.Field import Field
-from objects.Move import Move, steps_str, min_distance, get_wait_move, remove_duplicates, path_str, path_in_paths
+from objects.Move import Move, steps_str, min_distance2, get_wait_move, remove_duplicates, path_str, path_in_paths
 from objects.Obstacle import Obstacle
 from objects.Robot import Robot
 
@@ -90,17 +90,17 @@ def first_robot_intersection(move: Move, robot: Robot) -> tuple[float, Move]:
         if not r_move == robot.path[-1] and (r_move.start_time > move.end_time or r_move.end_time < move.start_time):
             continue
 
-        min_dist, t = min_distance(move, r_move)
-        # if min_dist < move.clearance + r_move.clearance:
+        min_dist2, t = min_distance2(move, r_move)
+        # if min_dist2 < move.clearance + r_move.clearance:
         #     print("-------------------------------------------")
         #     print(f"    move: {move}, r_move: {r_move}")
-        #     print(f"    min_dist: {min_dist}, t: {t}")
+        #     print(f"    min_dist2: {min_dist2}, t: {t}")
         #     print(f"    clearance: {move.clearance + r_move.clearance}")
         #     print(f"    Robot: {robot.name}, path: {steps_str(robot.path)}")
         #     print("-------------------------------------------")
-        if min_dist == float('nan'):
+        if min_dist2 == float('nan'):
             continue
-        if min_dist < move.clearance + r_move.clearance and t < lowest_t:
+        if t < lowest_t and min_dist2 < (move.clearance + robot.radius) ** 2:
             lowest_t = t
             lowest_t_move = r_move
 
@@ -331,7 +331,6 @@ def get_possible_paths(move: Move, field: Field, depth: int) -> list[list[Move]]
     depth += 1
     if depth > MAX_DEPTH:
         print("|" * depth + f"Max depth reached: {move.__repr__()}")
-        input()
         return []
 
     # Closest object

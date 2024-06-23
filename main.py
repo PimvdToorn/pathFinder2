@@ -2,7 +2,6 @@ import asyncio
 import json
 import msvcrt
 import requests
-import time
 from math import pi
 
 import websockets
@@ -47,7 +46,7 @@ field.add_robots([
     Robot("C4", "", CLEARANCE, P(0.460, 1.370))
 ])
 
-set_best_paths([P(1, 0), P(1, 1), P(1, 2), P(2, 0), P(2, 1), P(2, 2)], field, 0, True, True)
+# set_best_paths([P(1, 0), P(1, 1), P(1, 2), P(2, 0), P(2, 1), P(2, 2)], field, 0, True, True)
 
 # set_best_paths([P(0, 0.2), P(0, -0.2), P(-0.2, 0), P(0.2, 0)], field, 0, True, True)
 
@@ -68,7 +67,7 @@ set_best_paths([P(1, 0), P(1, 1), P(1, 2), P(2, 0), P(2, 1), P(2, 2)], field, 0,
 # print(f"Robot {field.robots[4].name} path: {steps_str(field.robots[4].path)}")
 # set_path(P(2, 2), field.robots[5], field, 0)
 # print(f"Robot {field.robots[5].name} path: {steps_str(field.robots[5].path)}")
-exit()
+# exit()
 # print("Done calculating paths")
 
 
