@@ -8,13 +8,11 @@ import websockets
 from orjson import orjson
 
 from Controller import update_speed_l_and_r, get_expected_location_and_move, update_combined_speed_l_and_r
-from MathHelper import distance, get_heading
-from BestPaths import set_path, set_best_paths
-from PathFinder import get_possible_paths
+from MathHelper import get_heading
 from Terminal import command_input
 from Timer import Timer
-from Types import L, P, Point
-from objects.Move import Move, steps_str, path_str
+from Types import P, Point
+from objects.Move import Move
 from objects.Field import Field
 from objects.Obstacle import Obstacle, get_box
 from objects.Robot import Robot
@@ -32,11 +30,7 @@ R2_ADDRESS = ""
 field = Field()
 field.add_obstacles([
     get_box(P(0.0, 0.6), 0.5, 0.5),
-    get_box(P(1.2, 1.4), 0.5, 0.5),
-    # Obstacle([P(0.4, 1), P(0.4, 1.2), P(0.9, 0.9), P(0.9, 0.75), P(1.75, 0.75), P(1.5, 0.2), P(0.8, 0.3)])
-    # Obstacle([P(2, 1), P(2, 3), P(6, 4), P(4, 2), P(6, 0), P(4, 1)]),
-    # Obstacle([P(9, 3), P(6, 6), P(7, 7)]),
-    # Obstacle([P(5, 5), P(2, 5), P(1, 7), P(3, 9), P(10, 9), P(10, 8), P(3.5, 7.5), P(4, 6)])
+    get_box(P(1.2, 1.4), 0.5, 0.5)
 ])
 
 field.add_robots([
@@ -47,38 +41,6 @@ field.add_robots([
     Robot("C3", "", CLEARANCE, P(1.450, -0.270)),
     Robot("C4", "", CLEARANCE, P(0.460, 1.370))
 ])
-
-# print(get_possible_paths(Move(L(P(0.869900, 1.069900), P(0.869900, 1.069900)), CLEARANCE, 0), field, 0))
-# input()
-# set_best_paths([P(1, 0), P(1, 1), P(1, 2), P(2, 0), P(2, 1), P(2, 2)], field, 0, True, True)
-# for r in field.robots:
-#     r.path = []
-#     r.destination = None
-# set_best_paths([P(0.5, 0.5), P(-0.5, 0.5), P(0.75, 1.5), P(1, 1.75), P(1.25, 1.75), P(-0.5, 0.2)], field, 0, True, True)
-# for r in field.robots:
-#     r.path = []
-#     r.destination = None
-# set_best_paths([P(0, 0.2), P(0, -0.2), P(-0.2, 0), P(0.2, 0)], field, 0, True, True)
-
-# r = field.robots[2]
-# set_path(P(0, 0.2), r, field, 0)
-# print(f"Robot {r.name} path: {steps_str(r.path)}")
-# print("------------------------------------------------------------------------------------------------")
-# r = field.robots[4]
-# set_path(P(0, -0.2), r, field, 0)
-# print(f"Robot {r.name} path: {steps_str(r.path)}")
-# r = field.robots[3]
-# set_path(P(0.2, 0.0), r, field, 0)
-# print(f"Robot {r.name} path: {steps_str(r.path)}")
-# r = field.robots[5]
-# set_path(P(-0.2, 0.0), r, field, 0)
-# print(f"Robot {r.name} path: {steps_str(r.path)}")
-# set_path(P(2, 1), field.robots[4], field, 0)
-# print(f"Robot {field.robots[4].name} path: {steps_str(field.robots[4].path)}")
-# set_path(P(2, 2), field.robots[5], field, 0)
-# print(f"Robot {field.robots[5].name} path: {steps_str(field.robots[5].path)}")
-# exit()
-# print("Done calculating paths")
 
 
 class FrameCounter:
